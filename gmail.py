@@ -42,7 +42,7 @@ def authenticate_gmail():
             # Detect environment - FIXED VERSION
             try:
                 # Check if we're in Streamlit Cloud
-                if "streamlit.app" in st.get_option("server.baseUrl"):
+                if st.runtime.scriptrunner.is_running_on_streamlit_cloud:
                     redirect_uri = "https://mailsense.streamlit.app/"
                 else:
                     redirect_uri = "http://localhost:8501/"
