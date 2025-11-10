@@ -71,9 +71,9 @@ def authenticate_gmail():
     
     # Set redirect URI with trailing slash (MUST match Google Console exactly)
     if is_cloud:
-        redirect_uri = "https://mailsense.streamlit.app/"
+        redirect_uri = "https://mailsense.streamlit.app"
     else:
-        redirect_uri = "http://localhost:8501/"
+        redirect_uri = "http://localhost:8501"
 
     # Initialize OAuth flow
     flow = Flow.from_client_config(
