@@ -67,7 +67,6 @@ def authenticate_gmail():
             st.stop()
 
         # HARDCODED REDIRECT URI FOR STREAMLIT CLOUD
-        # This is the most reliable method for Streamlit Cloud deployment
         redirect_uri = "https://smart-email-engine-5khhar4st9jnt348hzba8.streamlit.app/oauth2callback"
         
         # DEBUG: Show configuration
@@ -97,11 +96,11 @@ def authenticate_gmail():
             # Not logged in yet → show login button
             auth_url, _ = flow.authorization_url(prompt="consent", access_type="offline")
             
-            st.markdown(
-                f'<a href="{auth_url}" target="_self">'
-                '<button style="padding:8px 16px;background-color:#4285F4;color:white;border:none;border-radius:4px;">'
-                'Login with Gmail</button></a>',
-                unsafe_allow_html=True,
+            # Use Streamlit's native link button - more reliable than HTML
+            st.link_button(
+                label="🔐 Login with Gmail",
+                url=auth_url,
+                type="primary"
             )
             st.stop()
         else:
