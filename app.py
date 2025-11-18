@@ -74,36 +74,38 @@ if st.session_state.get("email_list"):
     
     st.text_area("Email Content", selected_email, height=200, key="email_content_display")
 
+    summary_key = f"summary_{selected_index}"
+    caption_key = f"caption_{selected_index}"
+
     # --- Step 4: Automatic Summarization ---
     st.subheader("📝 Email Summary")
-    if "summary" not in st.session_state:
-        # Generate summary automatically when email is selected
+
+
+    summary_key = f"summary_{selected_index}"
+    
+    if summary_key not in st.session_state:
         with st.spinner("Generating summary automatically..."):
             try:
                 summary = summarize_email(original_email)
-                st.session_state["summary"] = summary
-                st.session_state["summary_email"] = summary
+                st.session_state[summary_key] = summary
             except Exception as e:
-                st.error(f"❌ Summarization failed: {e}")
-                st.session_state["summary"] = "Summary unavailable"
+                st.session_state[summary_key] = "Summary unavailable"
     
-    # Display the summary
-    st.text_area("Summary", st.session_state["summary"], height=150, key="summary_display")
+    st.text_area("Summary", st.session_state[summary_key], height=150)
 
     # --- Step 5: Automatic Caption Generation ---
     st.subheader("🏷️ Email Caption")
-    if "caption" not in st.session_state:
-        # Generate caption automatically when email is selected
+    caption_key = f"caption_{selected_index}"
+
+    if caption_key not in st.session_state:
         with st.spinner("Generating caption automatically..."):
             try:
                 caption = caption_email(original_email)
-                st.session_state["caption"] = caption
+                st.session_state[caption_key] = caption
             except Exception as e:
-                st.error(f"❌ Caption generation failed: {e}")
-                st.session_state["caption"] = "Caption unavailable"
+                st.session_state[caption_key] = "Caption unavailable"
     
-    # Display the caption
-    st.text_area("Caption", st.session_state["caption"], height=100, key="caption_display")
+    st.text_area("Caption", st.session_state[caption_key], height=100)
 
     # --- Step 6: Manual Actions (Optional) ---
     with st.expander("🛠️ Manual Actions (Optional)"):
