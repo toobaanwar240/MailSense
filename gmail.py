@@ -1,13 +1,11 @@
 import os.path
 import os
-import socket
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import streamlit as st
 from dotenv import load_dotenv
-from urllib.parse import urlparse, parse_qs
 from googleapiclient.errors import HttpError
 from calender import process_email
 from caption_emails import caption_email
@@ -31,8 +29,6 @@ SCOPES = [
 def authenticate_gmail():
     """
     Streamlit Cloud-friendly Gmail authentication.
-    Uses st.session_state to store credentials. No local files.
-    Works with a single redirect URI.
     """
 
     # --- 1. Return valid creds from session if available ---
@@ -47,7 +43,7 @@ def authenticate_gmail():
                 return creds
             except Exception as e:
                 st.warning(f"Token refresh failed: {e}")
-                pass  # Will re-authenticate below
+                pass
 
     # Initialize creds variable
     creds = None
@@ -70,41 +66,12 @@ def authenticate_gmail():
             st.error("Please configure secrets in Streamlit settings")
             st.stop()
 
-        # Detect environment using multiple methods
-        hostname = socket.gethostname()
+        # HARDCODED REDIRECT URI FOR STREAMLIT CLOUD
+        # This is the most reliable method for Streamlit Cloud deployment
+        redirect_uri = "https://smart-email-engine-5khhar4st9jnt348hzba8.streamlit.app/oauth2callback"
         
-        # Check multiple indicators for cloud environment
-        is_cloud = False
-        
-        # Method 1: Check hostname
-        if "streamlit" in hostname.lower() or "cloud-run" in hostname.lower():
-            is_cloud = True
-        
-        # Method 2: Check for Streamlit Cloud environment variables
-        if os.getenv("STREAMLIT_RUNTIME_ENVIRONMENT") == "cloud":
-            is_cloud = True
-        
-        # Method 3: Check if localhost is accessible
-        try:
-            import socket as sock
-            sock.create_connection(("localhost", 8501), timeout=0.1)
-            is_cloud = False  # If localhost is accessible, we're local
-        except:
-            is_cloud = True  # If localhost not accessible, we're likely cloud
-        
-        # Method 4: Fallback to secrets (if available)
-        if not is_cloud and st.secrets.get("env") == "cloud":
-            is_cloud = True
-        
-        # Set redirect URI based on environment
-        if is_cloud:
-            redirect_uri = "https://smart-email-engine-5khhar4st9jnt348hzba8.streamlit.app/oauth2callback"
-        else:
-            redirect_uri = "http://localhost:8501"
-        
-        # DEBUG: Show detailed environment detection
-        st.info(f"🔍 DEBUG: Hostname: {hostname}")
-        st.info(f"🔍 DEBUG: Is Cloud Environment: {is_cloud}")
+        # DEBUG: Show configuration
+        st.info(f"🔍 DEBUG: Using Streamlit Cloud Configuration")
         st.info(f"🔍 DEBUG: Redirect URI: {redirect_uri}")
         st.info(f"🔍 DEBUG: Client ID: {client_id[:20]}...")
 
@@ -130,11 +97,6 @@ def authenticate_gmail():
             # Not logged in yet → show login button
             auth_url, _ = flow.authorization_url(prompt="consent", access_type="offline")
             
-            # DEBUG: Show auth URL
-            st.info(f"🔍 DEBUG: Auth URL generated")
-            with st.expander("🔍 View Full Auth URL"):
-                st.code(auth_url, language=None)
-            
             st.markdown(
                 f'<a href="{auth_url}" target="_self">'
                 '<button style="padding:8px 16px;background-color:#4285F4;color:white;border:none;border-radius:4px;">'
@@ -146,30 +108,23 @@ def authenticate_gmail():
             # User returned from Google with ?code=...
             auth_code = query_params["code"]
             
-            # DEBUG: Log the auth process
-            st.info(f"🔍 DEBUG: Received auth code: {auth_code[:20]}...")
-            st.info(f"🔍 DEBUG: Using redirect URI: {flow.redirect_uri}")
-            st.info(f"🔍 DEBUG: Fetching token...")
+            st.info(f"🔍 DEBUG: Processing OAuth callback...")
             
             try:
                 flow.fetch_token(code=auth_code)
                 creds = flow.credentials
                 
-                # DEBUG: Log success
-                st.success("✅ DEBUG: Token fetched successfully!")
-                st.info(f"🔍 DEBUG: Token valid: {creds.valid}")
-                st.info(f"🔍 DEBUG: Has refresh token: {creds.refresh_token is not None}")
+                st.success("✅ Token fetched successfully!")
                 
-                # Save to session state (persists during session)
+                # Save to session state
                 st.session_state["creds"] = creds
                 
                 # Save to file (for local development only)
                 try:
                     with open("token.json", "w") as token_file:
                         token_file.write(creds.to_json())
-                    st.info("✅ DEBUG: Saved to token.json")
-                except Exception as e:
-                    st.warning(f"Could not save token.json: {e}")
+                except:
+                    pass
 
                 st.success("✅ Logged in successfully!")
                 st.balloons()
@@ -179,26 +134,18 @@ def authenticate_gmail():
                 st.rerun()
                 
             except Exception as e:
-                # DEBUG: Log the exact error
-                st.error(f"❌ DEBUG: Token fetch failed!")
-                st.error(f"**Error type:** {type(e).__name__}")
-                st.error(f"**Error message:** {str(e)}")
-                st.error(f"**Redirect URI used:** {flow.redirect_uri}")
-                st.error(f"**Client ID:** {client_id[:30]}...")
+                st.error(f"❌ Authentication failed!")
+                st.error(f"**Error:** {str(e)}")
                 
-                # Show full error details in expander
-                with st.expander("🔍 Full Error Details"):
-                    st.code(str(e))
+                with st.expander("🔍 Error Details"):
                     import traceback
                     st.code(traceback.format_exc())
                 
-                # Troubleshooting hints
                 st.warning("### 🔧 Troubleshooting:")
-                st.write("1. Check that the redirect URI in Google Cloud Console matches:")
-                st.code(flow.redirect_uri)
-                st.write("2. Verify you're added as a test user in Google Cloud Console")
-                st.write("3. Try clearing browser cookies and cache")
-                st.write("4. Check that all required scopes are added in Data Access")
+                st.write("1. Make sure this redirect URI is in Google Cloud Console:")
+                st.code(redirect_uri)
+                st.write("2. Verify you're added as a test user")
+                st.write("3. Check that OAuth consent screen has all required scopes")
                 
                 st.stop()
 
@@ -231,11 +178,10 @@ def send_test_email(service, sender, recipient):
         sender=sender,
         to=recipient,
         subject="Test Gmail API",
-        message_text="Hello from Python Gmail API! Let's schedule our project discussion meeting on October 30, 2025, at 3:30 PM."
+        message_text="Hello from Python Gmail API!"
     )
     send_message(service, "me", msg)
 
-  
 def fetch_latest_email(service):
     """Fetch latest email from inbox and return content"""
     results = service.users().messages().list(userId='me', maxResults=1, labelIds=['INBOX']).execute()
