@@ -1,5 +1,6 @@
 import os.path
 import os
+import socket
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
@@ -69,14 +70,41 @@ def authenticate_gmail():
             st.error("Please configure secrets in Streamlit settings")
             st.stop()
 
-        # Detect environment
-        if st.secrets.get("env") == "cloud":
+        # Detect environment using multiple methods
+        hostname = socket.gethostname()
+        
+        # Check multiple indicators for cloud environment
+        is_cloud = False
+        
+        # Method 1: Check hostname
+        if "streamlit" in hostname.lower() or "cloud-run" in hostname.lower():
+            is_cloud = True
+        
+        # Method 2: Check for Streamlit Cloud environment variables
+        if os.getenv("STREAMLIT_RUNTIME_ENVIRONMENT") == "cloud":
+            is_cloud = True
+        
+        # Method 3: Check if localhost is accessible
+        try:
+            import socket as sock
+            sock.create_connection(("localhost", 8501), timeout=0.1)
+            is_cloud = False  # If localhost is accessible, we're local
+        except:
+            is_cloud = True  # If localhost not accessible, we're likely cloud
+        
+        # Method 4: Fallback to secrets (if available)
+        if not is_cloud and st.secrets.get("env") == "cloud":
+            is_cloud = True
+        
+        # Set redirect URI based on environment
+        if is_cloud:
             redirect_uri = "https://smart-email-engine-5khhar4st9jnt348hzba8.streamlit.app/oauth2callback"
         else:
             redirect_uri = "http://localhost:8501"
         
-        # DEBUG: Show configuration
-        st.info(f"🔍 DEBUG: Environment: {st.secrets.get('env', 'local')}")
+        # DEBUG: Show detailed environment detection
+        st.info(f"🔍 DEBUG: Hostname: {hostname}")
+        st.info(f"🔍 DEBUG: Is Cloud Environment: {is_cloud}")
         st.info(f"🔍 DEBUG: Redirect URI: {redirect_uri}")
         st.info(f"🔍 DEBUG: Client ID: {client_id[:20]}...")
 
@@ -104,7 +132,8 @@ def authenticate_gmail():
             
             # DEBUG: Show auth URL
             st.info(f"🔍 DEBUG: Auth URL generated")
-            st.code(auth_url, language=None)
+            with st.expander("🔍 View Full Auth URL"):
+                st.code(auth_url, language=None)
             
             st.markdown(
                 f'<a href="{auth_url}" target="_self">'
@@ -143,7 +172,10 @@ def authenticate_gmail():
                     st.warning(f"Could not save token.json: {e}")
 
                 st.success("✅ Logged in successfully!")
-                st.query_params.clear()  # clean up URL
+                st.balloons()
+                
+                # Clean up URL and rerun
+                st.query_params.clear()
                 st.rerun()
                 
             except Exception as e:
@@ -152,13 +184,21 @@ def authenticate_gmail():
                 st.error(f"**Error type:** {type(e).__name__}")
                 st.error(f"**Error message:** {str(e)}")
                 st.error(f"**Redirect URI used:** {flow.redirect_uri}")
-                st.error(f"**Client ID:** {client_id[:20]}...")
+                st.error(f"**Client ID:** {client_id[:30]}...")
                 
                 # Show full error details in expander
                 with st.expander("🔍 Full Error Details"):
                     st.code(str(e))
                     import traceback
                     st.code(traceback.format_exc())
+                
+                # Troubleshooting hints
+                st.warning("### 🔧 Troubleshooting:")
+                st.write("1. Check that the redirect URI in Google Cloud Console matches:")
+                st.code(flow.redirect_uri)
+                st.write("2. Verify you're added as a test user in Google Cloud Console")
+                st.write("3. Try clearing browser cookies and cache")
+                st.write("4. Check that all required scopes are added in Data Access")
                 
                 st.stop()
 
