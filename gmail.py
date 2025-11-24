@@ -210,7 +210,7 @@ def main():
     try:
         service = build("gmail", "v1", credentials=creds)
         list_labels(service)
-        send_test_email(service, sender="your_email@gmail.com", recipient="your_email@gmail.com")
+        send_test_email(service, sender="toobaanwar240@gmail.com", recipient="toobaanwar240@gmail.com")
         process_latest_email(service)
     except HttpError as error:
         print(f"An error occurred: {error}")
