@@ -2,13 +2,12 @@ import streamlit as st
 from googleapiclient.discovery import build
 import re
 from send_email import (
-    get_messages,
     get_mime_message,
     get_email_content,
     send_message,
     create_message
 )
-from gmail import authenticate_gmail
+from gmail import authenticate_gmail, fetch_latest_unread_emails
 from summarize_emails import summarize_email
 from calender import process_email
 from caption_emails import caption_email
@@ -18,36 +17,41 @@ st.set_page_config(page_title="Gmail AI Assistant", layout="wide")
 st.title("📧 Gmail AI Assistant")
 
 # --- Step 1: Authentication ---
-# The authenticate_gmail() function handles the entire login UI
-# No need to create manual buttons - it will show the login button automatically
 creds = authenticate_gmail()
 
-# If we reach here, user is authenticated
-# Build the Gmail service
+# Build Gmail service
 service = build("gmail", "v1", credentials=creds)
 
-# --- Step 2: Fetch latest emails ---
+# --- Step 2: Fetch latest UNREAD emails (5 only) ---
 if st.button("Fetch Latest Emails"):
-    with st.spinner("Fetching your emails..."):
-        messages_data = get_messages(service, "me")
-        if messages_data.get("messages"):
+    with st.spinner("Fetching your unread emails..."):
+
+        # NEW FUNCTION - Fetch only unread emails
+        messages_data = fetch_latest_unread_emails(service, max_results=5)
+
+        if messages_data:
             email_list = []
-            for msg in messages_data["messages"][:5]:  # fetch top 5 emails
-                mime_msg = get_mime_message(service, "me", msg["id"])
-                content = get_email_content(mime_msg)
-                # Store both original and processed content
+
+            for msg in messages_data:
+                content = msg["content"]
+
+                # Preprocess for summary/caption
                 processed_content = preprocess_email(content, max_tokens=5000)
+
                 email_list.append({
-                    "id": msg["id"], 
-                    "content": processed_content, 
+                    "id": msg["id"],
+                    "content": processed_content,
                     "original_content": content
                 })
+
             st.session_state["email_list"] = email_list
-            st.session_state["selected_email_index"] = 0  # Auto-select first email
-            st.success(f"Fetched {len(email_list)} emails!")
-            st.rerun()  # Refresh to show the emails immediately
+            st.session_state["selected_email_index"] = 0
+
+            st.success(f"Fetched {len(email_list)} unread emails!")
+            st.rerun()
+
         else:
-            st.warning("No emails found.")
+            st.warning("No unread emails found.")
 
 # --- Step 3: Select an email to view ---
 if st.session_state.get("email_list"):
@@ -58,59 +62,56 @@ if st.session_state.get("email_list"):
         format_func=lambda x: st.session_state["email_list"][x]["content"][:50] + "...",
         key="email_selector"
     )
-    
-    # Update selected email when user changes selection
+
+    # Email changed
     if selected_index != st.session_state.get("selected_email_index", -1):
         st.session_state["selected_email_index"] = selected_index
-        # Clear previous summaries when email changes
+        
+        # Clear old data
         if "summary" in st.session_state:
             del st.session_state["summary"]
         if "caption" in st.session_state:
             del st.session_state["caption"]
+
         st.rerun()
-    
+
     selected_email = st.session_state["email_list"][selected_index]["content"]
     original_email = st.session_state["email_list"][selected_index]["original_content"]
-    
-    st.text_area("Email Content",selected_email,height=200,key=f"email_content_display_{selected_index}")
 
-    summary_key = f"summary_{selected_index}"
-    caption_key = f"caption_{selected_index}"
+    st.text_area("Email Content", selected_email, height=200, key="email_content_display")
 
     # --- Step 4: Automatic Summarization ---
     st.subheader("📝 Email Summary")
-
-
-    summary_key = f"summary_{selected_index}"
-    
-    if summary_key not in st.session_state:
+    if "summary" not in st.session_state:
         with st.spinner("Generating summary automatically..."):
             try:
                 summary = summarize_email(original_email)
-                st.session_state[summary_key] = summary
+                st.session_state["summary"] = summary
+                st.session_state["summary_email"] = summary
             except Exception as e:
-                st.session_state[summary_key] = "Summary unavailable"
-    
-    st.text_area("Summary", st.session_state[summary_key], height=150)
+                st.error(f"❌ Summarization failed: {e}")
+                st.session_state["summary"] = "Summary unavailable"
+
+    st.text_area("Summary", st.session_state["summary"], height=150, key="summary_display")
 
     # --- Step 5: Automatic Caption Generation ---
     st.subheader("🏷️ Email Caption")
-    caption_key = f"caption_{selected_index}"
-
-    if caption_key not in st.session_state:
+    if "caption" not in st.session_state:
         with st.spinner("Generating caption automatically..."):
             try:
                 caption = caption_email(original_email)
-                st.session_state[caption_key] = caption
+                st.session_state["caption"] = caption
             except Exception as e:
-                st.session_state[caption_key] = "Caption unavailable"
-    
-    st.text_area("Caption", st.session_state[caption_key], height=100)
+                st.error(f"❌ Caption generation failed: {e}")
+                st.session_state["caption"] = "Caption unavailable"
 
-    # --- Step 6: Manual Actions (Optional) ---
+    st.text_area("Caption", st.session_state["caption"], height=100, key="caption_display")
+
+    # --- Step 6: Manual Actions ---
     with st.expander("🛠️ Manual Actions (Optional)"):
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             if st.button("🔄 Regenerate Summary"):
                 with st.spinner("Regenerating summary..."):
@@ -122,7 +123,7 @@ if st.session_state.get("email_list"):
                         st.rerun()
                     except Exception as e:
                         st.error(f"❌ Summarization failed: {e}")
-        
+
         with col2:
             if st.button("🔄 Regenerate Caption"):
                 with st.spinner("Regenerating caption..."):
@@ -134,13 +135,12 @@ if st.session_state.get("email_list"):
                     except Exception as e:
                         st.error(f"❌ Caption generation failed: {e}")
 
-        # Calendar event extraction (still manual since it modifies calendar)
         st.subheader("📅 Calendar Event")
         if st.button("Extract Event from Email"):
             with st.spinner("Processing calendar event..."):
                 try:
                     process_email(original_email)
-                    st.success("Event processed and added to Calendar!")
+                    st.success("Event added to Calendar!")
                 except Exception as e:
                     st.error(f"❌ Calendar processing failed: {e}")
 
@@ -154,7 +154,7 @@ if st.session_state.get("email_list"):
         if not recipient.strip():
             st.error("Please enter a recipient email address.")
         elif not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", recipient):
-            st.error("Please enter a valid email address.")
+            st.error("Invalid email address.")
         else:
             try:
                 msg = create_message(
@@ -164,6 +164,6 @@ if st.session_state.get("email_list"):
                     message_text=body
                 )
                 send_message(service, "me", msg)
-                st.success(f"✅ Email successfully sent to {recipient}!")
+                st.success(f"✅ Email sent to {recipient}!")
             except Exception as e:
-                st.error(f"❌ Failed to send email: {e}")
+                st.error(f"❌ Failed to send email: {e}") 
