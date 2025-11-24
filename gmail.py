@@ -1,12 +1,15 @@
-import os.path
 import os
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 import streamlit as st
 from dotenv import load_dotenv
+<<<<<<< HEAD
 from googleapiclient.errors import HttpError
+=======
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
 
 from calender import process_email
 from caption_emails import caption_email
@@ -15,27 +18,42 @@ from summarize_emails import summarize_email
 
 load_dotenv()
 
+<<<<<<< HEAD
 # Google scopes
+=======
+# -----------------------------------------------------------------------------------
+# SCOPES
+# -----------------------------------------------------------------------------------
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
 SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
-    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.modify",   # <-- IMPORTANT (allows marking as read)
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/calendar.events",
 ]
 
+<<<<<<< HEAD
 # -------------------------
 # AUTHENTICATION
 # -------------------------
+=======
+# -----------------------------------------------------------------------------------
+# AUTHENTICATION
+# -----------------------------------------------------------------------------------
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
 def authenticate_gmail():
     if "session_id" not in st.session_state:
         st.session_state.session_id = os.urandom(16).hex()
 
     user_key = f"creds_{st.session_state.session_id}"
 
+<<<<<<< HEAD
     # Return existing valid credentials
+=======
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
     if user_key in st.session_state:
         creds = st.session_state[user_key]
 
@@ -51,6 +69,7 @@ def authenticate_gmail():
                 st.warning("Token refresh failed, please login again.")
                 st.session_state.pop(user_key, None)
 
+<<<<<<< HEAD
     # Redirect URL for Streamlit Cloud
     redirect_uri = "https://smart-email-engine-5khhar4st9jnt348hzba8.streamlit.app/oauth2callback"
 
@@ -59,6 +78,13 @@ def authenticate_gmail():
     client_secret = st.secrets["google"]["client_secret"]
 
     # Build OAuth flow
+=======
+    redirect_uri = "https://smart-email-engine-5khhar4st9jnt348hzba8.streamlit.app/oauth2callback"
+
+    client_id = st.secrets["google"]["client_id"]
+    client_secret = st.secrets["google"]["client_secret"]
+
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
     flow = Flow.from_client_config(
         {
             "web": {
@@ -75,7 +101,10 @@ def authenticate_gmail():
 
     query_params = st.query_params
 
+<<<<<<< HEAD
     # First visit → show login button
+=======
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
     if "code" not in query_params:
         auth_url, _ = flow.authorization_url(
             prompt="consent",
@@ -85,7 +114,10 @@ def authenticate_gmail():
         st.link_button("🔐 Login with Google", auth_url)
         st.stop()
 
+<<<<<<< HEAD
     # OAuth callback
+=======
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
     auth_code = query_params["code"]
 
     try:
@@ -101,11 +133,14 @@ def authenticate_gmail():
     except Exception as e:
         st.error("Authentication failed")
         st.error(str(e))
+<<<<<<< HEAD
 
         with st.expander("🔍 Full Error Traceback"):
             import traceback
             st.code(traceback.format_exc())
 
+=======
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
         st.stop()
 
     return creds
@@ -114,10 +149,17 @@ def authenticate_gmail():
 # SERVICES
 # -------------------------
 
+<<<<<<< HEAD
+=======
+# -----------------------------------------------------------------------------------
+# GMAIL SERVICE
+# -----------------------------------------------------------------------------------
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
 def get_gmail_service():
     creds = authenticate_gmail()
     return build("gmail", "v1", credentials=creds)
 
+<<<<<<< HEAD
 def get_calendar_service():
     creds = authenticate_gmail()
     return build("calendar", "v3", credentials=creds)
@@ -166,7 +208,105 @@ def fetch_latest_unread_emails(service, max_results=5):
 # -------------------------
 # MAIN FUNCTION
 # -------------------------
+=======
 
+# -----------------------------------------------------------------------------------
+# LIST LABELS (optional)
+# -----------------------------------------------------------------------------------
+def list_labels(service):
+    results = service.users().labels().list(userId="me").execute()
+    labels = results.get("labels", [])
+    if labels:
+        print("Labels:")
+        for label in labels:
+            print(label["name"])
+    else:
+        print("No labels found.")
+
+
+# -----------------------------------------------------------------------------------
+# SEND TEST EMAIL
+# -----------------------------------------------------------------------------------
+def send_test_email(service, sender, recipient):
+    msg = create_message(
+        sender=sender,
+        to=recipient,
+        subject="Test Gmail API",
+        message_text="Hello from Python Gmail API!"
+    )
+    send_message(service, "me", msg)
+
+
+# -----------------------------------------------------------------------------------
+# FETCH LATEST UNREAD EMAIL ★★★★★
+# -----------------------------------------------------------------------------------
+def fetch_latest_email(service):
+    """Fetch ONLY the latest UNREAD email from the inbox."""
+    try:
+        results = service.users().messages().list(
+            userId="me",
+            q="is:unread in:inbox",     # <--- ONLY UNREAD EMAILS
+            maxResults=1
+        ).execute()
+
+        messages = results.get("messages", [])
+        if not messages:
+            print("No unread messages.")
+            return None
+
+        latest_msg_id = messages[0]["id"]
+
+        # Get MIME message
+        mime_msg = get_mime_message(service, "me", latest_msg_id)
+        if not mime_msg:
+            print("Failed to load message.")
+            return None
+
+        # Convert MIME message into readable text
+        content = get_email_content(mime_msg)
+        print("Original email:\n", content)
+
+        # Caption
+        caption = caption_email(content)
+        print("Caption:\n", caption)
+
+        # Summary
+        summary = summarize_email(content)
+        print("Summary:\n", summary)
+
+        # Process for calendar
+        process_email(content)
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
+
+        # Mark email as READ so it doesn't come again
+        service.users().messages().modify(
+            userId="me",
+            id=latest_msg_id,
+            body={"removeLabelIds": ["UNREAD"]}
+        ).execute()
+
+        return content
+
+    except HttpError as e:
+        print("Gmail API error:", e)
+        return None
+
+
+# -----------------------------------------------------------------------------------
+# PROCESS LATEST EMAIL
+# -----------------------------------------------------------------------------------
+def process_latest_email(service):
+    content = fetch_latest_email(service)
+    if content:
+        print("Final processed email:\n", content)
+        summary = summarize_email(content)
+        print("Summary:\n", summary)
+        process_email(content)
+
+
+# -----------------------------------------------------------------------------------
+# MAIN RUNNER (terminal only)
+# -----------------------------------------------------------------------------------
 def main():
     creds = authenticate_gmail()
 
@@ -208,8 +348,11 @@ def main():
         print(f"An error occurred: {error}")
 
 
+<<<<<<< HEAD
 # -------------------------
 # RUN
 # -------------------------
+=======
+>>>>>>> d97954c56976091c7fbc85ec19a1bf22df9def22
 if __name__ == "__main__":
     main()

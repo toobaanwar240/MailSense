@@ -41,15 +41,13 @@ def extract_date_time_from_email(text):
 
 
 def get_calendar_service():
-    """Authorize and return Google Calendar API service"""
-    creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    else:
-        flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-        creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as token:
-            token.write(creds.to_json())
+    """Return Google Calendar API service using same Gmail OAuth credentials."""
+    creds = st.session_state.get("creds") or st.session_state.get(f"creds_{st.session_state.session_id}")
+    
+    if not creds:
+        st.error("❌ No credentials found. Please log in again.")
+        st.stop()
+
     return build("calendar", "v3", credentials=creds)
 
 def create_event(summary, description, start_time, end_time):
