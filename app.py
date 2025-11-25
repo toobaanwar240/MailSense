@@ -26,14 +26,16 @@ service = build("gmail", "v1", credentials=creds)
 if st.button("Fetch Latest Emails"):
     with st.spinner("Fetching your unread emails..."):
 
-        # NEW FUNCTION - Fetch only unread emails
+        # Fetch only unread emails
         messages_data = fetch_latest_unread_emails(service, max_results=5)
 
         if messages_data:
+            st.write(f"DEBUG: Fetched {len(messages_data)} emails")
             email_list = []
 
             for msg in messages_data:
                 content = msg["content"]
+                st.write(f"DEBUG: Email ID {msg['id']}, Content length: {len(content)}")
 
                 # Preprocess for summary/caption
                 processed_content = preprocess_email(content, max_tokens=5000)
@@ -46,6 +48,11 @@ if st.button("Fetch Latest Emails"):
 
             st.session_state["email_list"] = email_list
             st.session_state["selected_email_index"] = 0
+            
+            # Clear any old summaries/captions when fetching new emails
+            keys_to_remove = [key for key in st.session_state.keys() if key.startswith(("summary_", "caption_"))]
+            for key in keys_to_remove:
+                st.session_state.pop(key, None)
 
             st.success(f"Fetched {len(email_list)} unread emails!")
             st.rerun()
@@ -63,17 +70,9 @@ if st.session_state.get("email_list"):
         key="email_selector"
     )
 
-    # Email changed
+    # Email changed - Update index
     if selected_index != st.session_state.get("selected_email_index", -1):
         st.session_state["selected_email_index"] = selected_index
-        
-        # Clear old data
-        if "summary" in st.session_state:
-            del st.session_state["summary"]
-        if "caption" in st.session_state:
-            del st.session_state["caption"]
-
-        st.rerun()
 
     selected_email = st.session_state["email_list"][selected_index]["content"]
     original_email = st.session_state["email_list"][selected_index]["original_content"]
@@ -82,30 +81,49 @@ if st.session_state.get("email_list"):
 
     # --- Step 4: Automatic Summarization ---
     st.subheader("📝 Email Summary")
-    if "summary" not in st.session_state:
+    
+    # Generate summary for current email if not already done
+    summary_key = f"summary_{selected_index}"
+    
+    if summary_key not in st.session_state:
         with st.spinner("Generating summary automatically..."):
             try:
                 summary = summarize_email(original_email)
+                st.session_state[summary_key] = summary
                 st.session_state["summary"] = summary
                 st.session_state["summary_email"] = summary
             except Exception as e:
                 st.error(f"❌ Summarization failed: {e}")
+                st.session_state[summary_key] = "Summary unavailable"
                 st.session_state["summary"] = "Summary unavailable"
+                st.session_state["summary_email"] = ""
+    else:
+        # Load existing summary for this email
+        st.session_state["summary"] = st.session_state[summary_key]
+        st.session_state["summary_email"] = st.session_state[summary_key]
 
-    st.text_area("Summary", st.session_state["summary"], height=150, key="summary_display")
+    st.text_area("Summary", st.session_state.get("summary", "Generating..."), height=150, key="summary_display")
 
     # --- Step 5: Automatic Caption Generation ---
     st.subheader("🏷️ Email Caption")
-    if "caption" not in st.session_state:
+    
+    caption_key = f"caption_{selected_index}"
+    
+    if caption_key not in st.session_state:
         with st.spinner("Generating caption automatically..."):
             try:
                 caption = caption_email(original_email)
+                st.session_state[caption_key] = caption
                 st.session_state["caption"] = caption
             except Exception as e:
                 st.error(f"❌ Caption generation failed: {e}")
+                st.session_state[caption_key] = "Caption unavailable"
                 st.session_state["caption"] = "Caption unavailable"
+    else:
+        # Load existing caption for this email
+        st.session_state["caption"] = st.session_state[caption_key]
 
-    st.text_area("Caption", st.session_state["caption"], height=100, key="caption_display")
+    st.text_area("Caption", st.session_state.get("caption", "Generating..."), height=100, key="caption_display")
 
     # --- Step 6: Manual Actions ---
     with st.expander("🛠️ Manual Actions (Optional)"):
@@ -117,6 +135,7 @@ if st.session_state.get("email_list"):
                 with st.spinner("Regenerating summary..."):
                     try:
                         summary = summarize_email(original_email)
+                        st.session_state[summary_key] = summary
                         st.session_state["summary"] = summary
                         st.session_state["summary_email"] = summary
                         st.success("Summary regenerated!")
@@ -129,6 +148,7 @@ if st.session_state.get("email_list"):
                 with st.spinner("Regenerating caption..."):
                     try:
                         caption = caption_email(original_email)
+                        st.session_state[caption_key] = caption
                         st.session_state["caption"] = caption
                         st.success("Caption regenerated!")
                         st.rerun()
@@ -166,4 +186,4 @@ if st.session_state.get("email_list"):
                 send_message(service, "me", msg)
                 st.success(f"✅ Email sent to {recipient}!")
             except Exception as e:
-                st.error(f"❌ Failed to send email: {e}") 
+                st.error(f"❌ Failed to send email: {e}")
