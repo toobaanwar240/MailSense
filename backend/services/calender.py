@@ -45,7 +45,7 @@ def get_calendar_service():
     creds = st.session_state.get("creds") or st.session_state.get(f"creds_{st.session_state.session_id}")
     
     if not creds:
-        st.error("❌ No credentials found. Please log in again.")
+        st.error("No credentials found. Please log in again.")
         st.stop()
 
     return build("calendar", "v3", credentials=creds)
@@ -137,4 +137,5 @@ def process_email(email_text):
             end_time=end_time,
         )
     else:
-        print("⚠️ Could not find valid date/time in email.")
+        print("Could not find valid date/time in email.")
+

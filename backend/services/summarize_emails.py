@@ -2,7 +2,7 @@ import groq as Groq
 import os
 from dotenv import load_dotenv
 import streamlit as st
-from email_processor import preprocess_email, split_email_content
+from backend.services.email_processor import preprocess_email
 
 # Load variables from .env file
 load_dotenv()
@@ -83,6 +83,6 @@ def summarize_long_email_fallback(text):
             max_tokens=300,
             temperature=0.3
         )
-        return f"📋 Brief Summary (email was very long):\n{response.choices[0].message.content}"
+        return f"Brief Summary (email was very long):\n{response.choices[0].message.content}"
     except Exception as e:
         return "This email is too long to summarize effectively. Please try with a shorter email." 

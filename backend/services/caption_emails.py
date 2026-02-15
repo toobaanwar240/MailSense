@@ -2,7 +2,7 @@ import groq as Groq
 import os
 from dotenv import load_dotenv
 import streamlit as st
-from email_processor import preprocess_email
+from backend.services.email_processor import preprocess_email
 
 # Load variables from .env file
 load_dotenv()
@@ -74,7 +74,7 @@ def caption_email(text):
                 max_tokens=50,
                 temperature=0.3
             )
-            return f"📌 {response.choices[0].message.content.strip()}"
+            return f" {response.choices[0].message.content.strip()}"
         else:
             st.error(f"Caption generation error: {e}")
             return "Email caption unavailable"
