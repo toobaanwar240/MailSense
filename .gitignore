@@ -4,3 +4,4 @@ secrets.toml
 client_secret_503898306432-g1frk96u7cn36o3joaea5nbh5q68h3lt.apps.googleusercontent.com.json
 .toml
 venv/
+chroma_db/
