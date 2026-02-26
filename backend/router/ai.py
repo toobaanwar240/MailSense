@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
 import pytz
+from backend.services.compose_reply import generate_email_reply, generate_new_email
 from backend.services.summarize_emails import summarize_email
 from backend.services.caption_emails import caption_email
 from backend.services.calender import process_email, create_event
@@ -14,6 +15,19 @@ router = APIRouter(tags=["AI"])
 class EmailRequest(BaseModel):
     email_text: str
 
+class EmailReplyRequest(BaseModel):
+    sender: str
+    subject: str
+    email_text: str
+    your_name: str = "Assistant"
+    tone: str = "professional"
+
+class NewEmailRequest(BaseModel):
+    to: str
+    topic: str                        # what the email is about
+    tone: str = "professional"        # professional | formal | casual
+    additional_context: str = "" 
+    
 class CalendarEventRequest(BaseModel):
     summary: str
     description: str
@@ -75,3 +89,38 @@ def create_calendar_event_endpoint(request: CalendarEventRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/reply")
+def reply_email_endpoint(request: EmailReplyRequest):
+    """
+    Analyse the incoming email and generate a contextually appropriate reply.
+    The LLM detects intent (inquiry, complaint, request, follow-up, etc.)
+    and adjusts tone and content automatically.
+    """
+    try:
+        result = generate_email_reply(
+            sender=request.sender,
+            subject=request.subject,
+            email_text=request.email_text,
+            your_name=request.your_name,
+            tone=request.tone,
+        )
+        return result         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    
+@router.post("/generate-email")
+def generate_email_endpoint(request: NewEmailRequest):
+    """
+    Generate a brand new email from scratch based on a topic/prompt.
+    """
+    try:
+        result = generate_new_email(
+            to=request.to,
+            topic=request.topic,
+            tone=request.tone,
+            additional_context=request.additional_context,
+        )
+        return result  
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

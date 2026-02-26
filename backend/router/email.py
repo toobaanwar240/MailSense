@@ -181,16 +181,18 @@ def send_email(
         return {"id": result["id"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+ 
 #================ RAG =================
 
 @router.post("/rag/index")
 def rag_index(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Index all emails for RAG."""
-    return rag_system.index_user_emails(db, current_user)
+    return rag_system.index_user_emails(db, current_user.email)
+
 
 @router.post("/rag/ask")
 def rag_ask(

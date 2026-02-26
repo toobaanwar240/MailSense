@@ -1,11 +1,3 @@
-"""
-Your Auth Router - Converted to Async
-✅ All endpoints async
-✅ Uses httpx instead of requests
-✅ Non-blocking HTTP calls
-✅ Much faster!
-"""
-
 import urllib
 from dotenv import load_dotenv
 from fastapi.responses import RedirectResponse
