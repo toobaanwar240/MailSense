@@ -714,7 +714,7 @@ class InboxOnlyRAG:
         
         try:
             response = self.groq_client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="llama-3.3-70b-versatile",
                 messages=[
                     {
                         "role": "system",
@@ -860,7 +860,7 @@ class InboxOnlyRAG:
             messages.append({"role": "user", "content": user_prompt})
 
             response = self.groq_client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="llama-3.3-70b-versatile",
                 messages=messages,
                 temperature=0.05,
                 max_tokens=self.max_response_tokens

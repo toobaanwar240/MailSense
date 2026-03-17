@@ -1,12 +1,17 @@
 # backend/routes/ai_router.py
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from datetime import datetime
 import pytz
-from backend.services.compose_reply import generate_email_reply, generate_new_email
+from sqlalchemy.orm import Session
+
 from backend.services.summarize_emails import summarize_email
 from backend.services.caption_emails import caption_email
 from backend.services.calender import process_email, create_event
+from backend.services.classifier import classifier
+from backend.db.database import get_db
+from backend.router.dependencies import get_current_user
+from backend.services.compose_reply import generate_email_reply, generate_new_email
 
 router = APIRouter(tags=["AI"])
 
@@ -122,5 +127,27 @@ def generate_email_endpoint(request: NewEmailRequest):
             additional_context=request.additional_context,
         )
         return result  
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+class ClassifyRequest(BaseModel):
+    subject: str
+    body: str
+
+from backend.services.classifier import classifier
+
+class ClassifyRequest(BaseModel):
+    subject: str
+    body: str
+
+@router.post("/classify")
+def classify_email_endpoint(
+    request: ClassifyRequest,
+    current_user=Depends(get_current_user)
+):
+    """Classify an email into a category."""
+    try:
+        result = classifier.classify(request.subject, request.body)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
