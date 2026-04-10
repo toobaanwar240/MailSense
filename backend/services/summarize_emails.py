@@ -35,19 +35,18 @@ def summarize_email(text):
             messages=[
                 {
                     "role": "system", 
-                    "content": """You are an expert email summarizer. Create a clear, concise summary with:
-                    - Key points as bullet points
-                    - Action items if any
-                    - Important dates/deadlines
-                    - Main purpose of the email
-                    Keep it brief but informative."""
+                    "content": """You are a concise email summarizer. Summarize with:
+                    - Key points (1 line each)
+                    - Action items (if any)
+                    - Deadlines (if any)
+                    Be brief. No elaboration."""
                 },
                 {
                     "role": "user", 
                     "content": f"Please summarize this email clearly:\n\n{processed_text}"
                 }
             ],
-            max_tokens=500,
+            max_tokens=250,
             temperature=0.3
         )
         return response.choices[0].message.content

@@ -1,3 +1,5 @@
+PyYAML==6.0.1
+
 # Date utilities
 python-dateutil==2.8.2
 pytz>=2024.2
@@ -14,7 +16,7 @@ psycopg2-binary==2.9.9
 
 # Pydantic
 pydantic==1.10.13
-pydantic-settings==0.2.5
+pydantic-settings
 
 # Environment
 python-dotenv==1.0.0
@@ -32,7 +34,7 @@ groq==0.4.1
 PyJWT==2.8.0
 
 # RAG / Vector DB
-chromadb==0.3.29
+chromadb
 sentence-transformers==2.2.2
 
 # LangChain

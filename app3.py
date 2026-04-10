@@ -8,6 +8,31 @@ API_BASE_URL = "http://localhost:8000"
 st.set_page_config(page_title="Gmail AI Assistant", page_icon="📧", layout="wide")
 
 # ========================
+# Custom CSS for badges
+# ========================
+st.markdown("""
+<style>
+    .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-right: 6px;
+    }
+    .badge-account_alerts     { background: #fef3c7; color: #d97706; }
+    .badge-career_personal    { background: #fef9c3; color: #854d0e; }
+    .badge-finance_legal      { background: #dbeafe; color: #1d4ed8; }
+    .badge-marketing_outreach { background: #ffedd5; color: #c2410c; }
+    .badge-work_operations    { background: #dcfce7; color: #15803d; }
+    .badge-unknown            { background: #f3f4f6; color: #6b7280; }
+    .conf-bar-wrap { background:#f3f4f6; border-radius:6px; height:8px; width:100%; margin:2px 0 6px; }
+    .conf-bar      { height:8px; border-radius:6px; background: linear-gradient(90deg,#6366f1,#8b5cf6); }
+</style>
+""", unsafe_allow_html=True)
+
+# ========================
 # Session State
 # ========================
 defaults = {
@@ -16,12 +41,14 @@ defaults = {
     "rag_results": None,
     "rag_question": None,
     "emails": [],
+    "emails_classified": {},     # NEW: cache for classifier results
     "selected_index": 0,
     "chat_history": [],
-    "rag_status": "idle",        # idle | indexing | ready | error
+    "rag_status": "idle",
     "rag_indexed_count": 0,
     "rag_last_checked": None,
-    "compose_last_index": -1,    # track which email was last loaded into compose
+    "compose_last_index": -1,
+    "category_filter": "All",    # NEW: active category filter
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -95,6 +122,67 @@ def trigger_index():
     return False
 
 
+# ── NEW: Classifier helpers ───────────────────────────────────────────────────
+
+CATEGORY_EMOJI = {
+    "account_alerts":    "🔔",
+    "career_personal":   "🎯",
+    "finance_legal":     "⚖️",
+    "marketing_outreach":"📢",
+    "work_operations":   "🖥️",
+    "unknown":           "❓",
+}
+
+CATEGORY_FILTER_OPTIONS = ["All", "account_alerts", "career_personal", "finance_legal", "marketing_outreach", "work_operations"]
+
+
+def classify_email(email: dict) -> dict:
+    """Call /ai/classify and cache result in session state."""
+    msg_id = email.get("id", "")
+    if msg_id and msg_id in st.session_state.emails_classified:
+        return st.session_state.emails_classified[msg_id]
+
+    subject = email.get("subject", "")
+    body    = email.get("body", "") or email.get("snippet", "")
+
+    try:
+        r = requests.post(
+            f"{API_BASE_URL}/ai/classify",
+            json={"subject": subject, "body": body[:500]},
+            headers=get_headers(),
+            timeout=10,
+        )
+        result = r.json() if r.status_code == 200 else {
+            "category": "unknown", "confidence": 0.0, "emoji": "⚪", "all_scores": {}
+        }
+    except Exception:
+        result = {"category": "unknown", "confidence": 0.0, "emoji": "⚪", "all_scores": {}}
+
+    if msg_id:
+        st.session_state.emails_classified[msg_id] = result
+    return result
+
+
+def render_badge(category: str, confidence: float = None) -> str:
+    emoji     = CATEGORY_EMOJI.get(category, "⚪")
+    conf_text = f" · {confidence}%" if confidence is not None else ""
+    return (
+        f'<span class="badge badge-{category}">'
+        f'{emoji} {category.upper()}{conf_text}'
+        f'</span>'
+    )
+
+
+def render_conf_bar(confidence: float) -> str:
+    return (
+        f'<div class="conf-bar-wrap">'
+        f'<div class="conf-bar" style="width:{confidence}%"></div>'
+        f'</div>'
+    )
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 # ========================
 # Auth
 # ========================
@@ -159,9 +247,9 @@ try:
         d = s.json()
         db_stats  = d.get("database", {})
         rag_stats = d.get("rag", {})
-        c1, c2, c3 = st.sidebar.columns(3)
+        col_l, c1, c3, col_r = st.sidebar.columns([1, 2, 2, 1])
         c1.metric("Total",   db_stats.get("total_emails", 0))
-        c2.metric("Unread",  db_stats.get("unread_emails", 0))
+        # c2.metric("Unread",  db_stats.get("unread_emails", 0))
         c3.metric("Indexed", rag_stats.get("indexed_emails", 0))
 except Exception:
     pass
@@ -191,15 +279,20 @@ if st.sidebar.button("🚪 Logout", use_container_width=True):
 tabs = st.tabs(["📬 Inbox", "💬 Chat Assistant", "🔍 Search Results", "✉️ Compose"])
 
 # ─────────────────────────────────────────────
-# TAB 1 — INBOX
+# TAB 1 — INBOX (UPDATED with classifier)
 # ─────────────────────────────────────────────
 with tabs[0]:
     st.header("Your Inbox")
 
-    if st.button("🔄 Refresh Emails", key="refresh_inbox"):
-        st.session_state.emails = []
-        st.rerun()
+    # Refresh + Clear cache buttons
+    col_ref, col_clr = st.columns([1, 1])
+    with col_ref:
+        if st.button("🔄 Refresh Emails", key="refresh_inbox"):
+            st.session_state.emails = []
+            st.session_state.emails_classified = {}
+            st.rerun()
 
+    # Fetch emails
     try:
         resp = requests.get(f"{API_BASE_URL}/email/list", headers=headers, timeout=10)
         if resp.status_code == 200:
@@ -217,30 +310,76 @@ with tabs[0]:
         st.info("No emails loaded. Click 'Refresh Emails'.")
         st.stop()
 
+    # ── Category Filter buttons ───────────────────────────────────────────────
+    st.markdown("**🏷️ Filter by Category:**")
+    filter_cols = st.columns(len(CATEGORY_FILTER_OPTIONS))
+    for i, cat in enumerate(CATEGORY_FILTER_OPTIONS):
+        emoji = "" if cat == "All" else CATEGORY_EMOJI.get(cat, "")
+        btn_label = f"{emoji} {cat.title()}" if emoji else cat
+        if filter_cols[i].button(
+            btn_label,
+            key=f"filter_{cat}",
+            use_container_width=True,
+            type="primary" if st.session_state.category_filter == cat else "secondary"
+        ):
+            st.session_state.category_filter = cat
+            # ── ADD THESE TWO LINES ──
+            # Find the first email matching the new filter and select it
+            first_match = next(
+                (idx for idx, em in enumerate(st.session_state.emails)
+                 if cat == "All" or classify_email(em).get("category") == cat),
+                0
+            )
+            st.session_state.selected_index = first_match
+            # ────────────────────────
+            st.rerun()
+
+    st.caption(f"Active filter: **{st.session_state.category_filter}**")
+    st.divider()
+
+    # ── Build filtered email list ─────────────────────────────────────────────
     st.subheader(f"📧 {len(emails)} Emails")
 
-    email_options = []
-    for idx, em in enumerate(emails):
-        subj  = em.get('subject', 'No Subject')
-        sndr  = em.get('sender', 'Unknown')
-        subj_s = (subj[:40] + "…") if len(subj) > 40 else subj
-        sndr_s = sndr.split('<')[0].strip() if '<' in sndr else sndr[:20]
-        email_options.append(f"{idx+1}. {subj_s} — {sndr_s}")
+    filtered_emails = []
+    email_options   = []
 
-    selected_index = st.selectbox(
+    for idx, em in enumerate(emails):
+        clf        = classify_email(em)
+        category   = clf.get("category", "unknown")
+        confidence = clf.get("confidence", 0.0)
+        emoji      = clf.get("emoji", "⚪")
+
+        em["category"]   = category
+        em["confidence"] = confidence
+        em["emoji"]      = emoji
+
+        # Apply filter
+        if st.session_state.category_filter != "All" and category != st.session_state.category_filter:
+            continue
+
+        filtered_emails.append((idx, em))
+        subj   = em.get("subject", "No Subject")
+        sndr   = em.get("sender", "Unknown")
+        subj_s = (subj[:35] + "…") if len(subj) > 35 else subj
+        sndr_s = sndr.split('<')[0].strip() if '<' in sndr else sndr[:15]
+        email_options.append(f"{emoji} {subj_s} — {sndr_s}")
+
+    if not filtered_emails:
+        st.info(f"No emails found in category: **{st.session_state.category_filter}**")
+        st.stop()
+
+    st.caption(f"Showing {len(filtered_emails)} email(s)")
+
+    # Email selector
+    selected_pos = st.selectbox(
         "Select Email to View",
-        options=list(range(len(emails))),
+        options=list(range(len(filtered_emails))),
         format_func=lambda x: email_options[x],
         key="email_selector"
     )
 
-    # Always update selected_index and always keep compose shadow vars in sync.
-    # We do this unconditionally so even the first email (index 0) is reflected.
-    st.session_state.selected_index = selected_index
-    sel = emails[selected_index]
-
-    # No compose sync needed here — compose tab derives content directly
-    # from the selected email on every render (no widget keys = no stale state).
+    original_idx, sel = filtered_emails[selected_pos]
+    st.session_state.selected_index = original_idx
 
     st.divider()
     st.subheader("📧 Email Details")
@@ -255,6 +394,29 @@ with tabs[0]:
             st.markdown("**Status:** 🔵 Unread")
         else:
             st.markdown("**Status:** ✓ Read")
+
+    # ── Category badge + confidence bar ──────────────────────────────────────
+    category   = sel.get("category", "unknown")
+    confidence = sel.get("confidence", 0.0)
+
+    st.markdown(
+        render_badge(category, confidence) +
+        render_conf_bar(confidence),
+        unsafe_allow_html=True
+    )
+
+    # ── All scores expander ───────────────────────────────────────────────────
+    clf_data   = classify_email(sel)
+    all_scores = clf_data.get("all_scores", {})
+    if all_scores:
+        with st.expander("📊 View all category scores"):
+            for cat, score in sorted(all_scores.items(), key=lambda x: x[1], reverse=True):
+                cat_emoji = CATEGORY_EMOJI.get(cat, "⚪")
+                st.markdown(
+                    f"{cat_emoji} **{cat.title()}** — {score}%  \n" +
+                    render_conf_bar(score),
+                    unsafe_allow_html=True
+                )
 
     st.divider()
 
@@ -329,7 +491,7 @@ with tabs[0]:
 
 
 # ─────────────────────────────────────────────
-# TAB 2 — CHAT ASSISTANT
+# TAB 2 — CHAT ASSISTANT (UNCHANGED)
 # ─────────────────────────────────────────────
 with tabs[1]:
     st.header("💬 Chat with Your Emails")
@@ -441,7 +603,7 @@ with tabs[1]:
 
 
 # ─────────────────────────────────────────────
-# TAB 3 — SEARCH RESULTS
+# TAB 3 — SEARCH RESULTS (UNCHANGED)
 # ─────────────────────────────────────────────
 with tabs[2]:
     st.header("🔍 Detailed Search Results")
@@ -583,16 +745,16 @@ with tabs[3]:
         base_subj = ""
         base_body = ""
 
-    # ── If AI content was accepted, override base values ─────────────────────
+    # ── If AI content was accepted, seed widget state ─────────────────────────
     if st.session_state.get("ai_reply_applied"):
-        base_subj = st.session_state.pop("ai_reply_applied_subj", base_subj)
-        base_body = st.session_state.pop("ai_reply_applied_body", base_body)
+        st.session_state["compose_subj"] = st.session_state.pop("ai_reply_applied_subj", base_subj)
+        st.session_state["compose_body"] = st.session_state.pop("ai_reply_applied_body", base_body)
         st.session_state.pop("ai_reply_applied", None)
 
-    # ── Compose fields (no key= so value= always works) ──────────────────────
-    to_email = st.text_input("To", value=base_to)
-    subject  = st.text_input("Subject", value=base_subj)
-    body     = st.text_area("Body", value=base_body, height=250)
+    # ── Compose fields ────────────────────────────────────────────────────────
+    to_email = st.text_input("To",      key="compose_to",   value=base_to)
+    subject  = st.text_input("Subject", key="compose_subj", value=base_subj)
+    body     = st.text_area("Body",     key="compose_body", value=base_body, height=250)
 
     st.divider()
 
