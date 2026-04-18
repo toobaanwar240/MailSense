@@ -74,15 +74,19 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):  # ✅ Change
         if not id_token:
             raise HTTPException(status_code=400, detail="Missing ID token")
 
-        # ✅ Changed from requests.get to await client.get
-        userinfo_response = await client.get(TOKEN_INFO_URL, params={"id_token": id_token})
+        userinfo_response = await client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
         userinfo = userinfo_response.json()
         
         if "error_description" in userinfo:
             raise HTTPException(status_code=400, detail=userinfo)
 
-        google_user_id = userinfo["sub"]
-        email = userinfo["email"]
+        google_user_id = userinfo.get("sub") or userinfo.get("id")
+        email = userinfo.get("email")
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not found in Google response")
 
         # Database operation (synchronous, but that's OK)
         user = create_or_update_user(
@@ -96,6 +100,8 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):  # ✅ Change
         # Generate JWT token
         token = create_jwt(user.id)
         
+        from backend.services.polling import on_new_user_login
+        on_new_user_login(user.id, user.email)
         # Redirect to frontend with token
         return RedirectResponse(
             url=f"http://localhost:8501/?token={token}&email={email}"

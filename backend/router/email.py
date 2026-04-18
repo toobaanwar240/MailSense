@@ -7,6 +7,7 @@ from backend.db.models import Email, User
 from backend.RAG.rag_service import rag_system
 from backend.services.send_email import get_mime_message, get_email_content, create_message, send_message
 from backend.router.dependencies import get_current_user
+from sqlalchemy import nullslast
 
 router = APIRouter(tags=["Email"])
 
@@ -109,7 +110,7 @@ def list_unread_emails(
         emails = (
             db.query(Email)
             .filter(Email.user_id == current_user.id)
-            .order_by(Email.date.desc())  # ✅ CHANGED: date instead of id
+            .order_by(nullslast(Email.date.desc()), Email.id.desc()) # ✅ CHANGED: date instead of id
             .limit(max_results)
             .all()
         )

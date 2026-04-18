@@ -1,3 +1,5 @@
+from pydantic.v1 import BaseModel
+
 from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Text, Boolean
 from .database import Base
 from datetime import datetime
@@ -52,3 +54,4 @@ def create_or_update_user(db: Session, google_user_id: str, email: str, access_t
     db.commit()
     db.refresh(user)
     return user
+

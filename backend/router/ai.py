@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime
 import pytz
 from sqlalchemy.orm import Session
-
+from backend.services.sentiment_analysis import analyze_sentiment
 from backend.services.summarize_emails import summarize_email
 from backend.services.caption_emails import caption_email
 from backend.services.calender import process_email, create_event
@@ -140,6 +140,11 @@ class ClassifyRequest(BaseModel):
     subject: str
     body: str
 
+
+class SentimentRequest(BaseModel):
+    subject: str
+    body: str
+
 @router.post("/classify")
 def classify_email_endpoint(
     request: ClassifyRequest,
@@ -148,6 +153,17 @@ def classify_email_endpoint(
     """Classify an email into a category."""
     try:
         result = classifier.classify(request.subject, request.body)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/sentiment")
+def sentiment_email_endpoint(
+    request: SentimentRequest,
+    current_user=Depends(get_current_user)
+):
+    try:
+        result = analyze_sentiment(request.subject, request.body)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

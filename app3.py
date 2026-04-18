@@ -42,6 +42,7 @@ defaults = {
     "rag_question": None,
     "emails": [],
     "emails_classified": {},     # NEW: cache for classifier results
+    "emails_sentiment": {},      # NEW: cache for sentiment results
     "selected_index": 0,
     "chat_history": [],
     "rag_status": "idle",
@@ -160,6 +161,43 @@ def classify_email(email: dict) -> dict:
 
     if msg_id:
         st.session_state.emails_classified[msg_id] = result
+    return result
+
+
+def analyze_email_sentiment(email: dict) -> dict:
+    """Call /ai/sentiment and cache result in session state."""
+    msg_id = email.get("id", "")
+    if msg_id and msg_id in st.session_state.emails_sentiment:
+        return st.session_state.emails_sentiment[msg_id]
+
+    subject = email.get("subject", "")
+    body = email.get("body", "") or email.get("snippet", "")
+
+    try:
+        r = requests.post(
+            f"{API_BASE_URL}/ai/sentiment",
+            json={"subject": subject, "body": body[:1000]},
+            headers=get_headers(),
+            timeout=12,
+        )
+        result = r.json() if r.status_code == 200 else {
+            "sentiment": "unknown",
+            "confidence": 0.0,
+            "emoji": "❓",
+            "explanation": "Sentiment API returned an error.",
+            "tone_tags": [],
+        }
+    except Exception:
+        result = {
+            "sentiment": "unknown",
+            "confidence": 0.0,
+            "emoji": "❓",
+            "explanation": "Unable to connect to sentiment service.",
+            "tone_tags": [],
+        }
+
+    if msg_id:
+        st.session_state.emails_sentiment[msg_id] = result
     return result
 
 
@@ -290,6 +328,7 @@ with tabs[0]:
         if st.button("🔄 Refresh Emails", key="refresh_inbox"):
             st.session_state.emails = []
             st.session_state.emails_classified = {}
+            st.session_state.emails_sentiment = {}
             st.rerun()
 
     # Fetch emails
@@ -404,6 +443,34 @@ with tabs[0]:
         render_conf_bar(confidence),
         unsafe_allow_html=True
     )
+
+    st.markdown("**🧠 Sentiment:**")
+    sentiment_data = analyze_email_sentiment(sel)
+    sentiment_label = sentiment_data.get("sentiment", "unknown")
+    sentiment_conf = sentiment_data.get("confidence", 0.0)
+    sentiment_emoji = sentiment_data.get("emoji", "❓")
+    sentiment_explanation = sentiment_data.get("explanation", "")
+    tone_tags = sentiment_data.get("tone_tags", [])
+
+    s1, s2, s3 = st.columns([2, 1, 2])
+    with s1:
+        st.markdown(f"**Label:** {sentiment_emoji} {str(sentiment_label).title()}")
+    with s2:
+        st.metric("Confidence", f"{sentiment_conf}%")
+    with s3:
+        if tone_tags:
+            st.markdown(f"**Tone tags:** {', '.join(tone_tags)}")
+        else:
+            st.markdown("**Tone tags:** -")
+
+    if sentiment_explanation:
+        st.caption(sentiment_explanation)
+
+    sentiment_cache_key = sel.get("id", "")
+    if st.button("🔁 Re-analyze Sentiment", key=f"sent_refresh_{original_idx}"):
+        if sentiment_cache_key in st.session_state.emails_sentiment:
+            del st.session_state.emails_sentiment[sentiment_cache_key]
+        st.rerun()
 
     # ── All scores expander ───────────────────────────────────────────────────
     clf_data   = classify_email(sel)
