@@ -15,7 +15,7 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 router = APIRouter(tags=["Auth"])
-redirect_uri = "http://localhost:8000/auth/callback"
+redirect_uri = "http://localhost:3000/auth/callback"
 SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -104,5 +104,5 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):  # ✅ Change
         on_new_user_login(user.id, user.email)
         # Redirect to frontend with token
         return RedirectResponse(
-            url=f"http://localhost:8501/?token={token}&email={email}"
+            url=f"http://localhost:3000/?token={token}&email={email}"
         )

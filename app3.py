@@ -1,3 +1,5 @@
+import uuid
+
 import streamlit as st
 import requests
 import re
@@ -49,7 +51,8 @@ defaults = {
     "rag_indexed_count": 0,
     "rag_last_checked": None,
     "compose_last_index": -1,
-    "category_filter": "All",    # NEW: active category filter
+    "category_filter": "All", 
+    "session_id": str(uuid.uuid4()),   
 }
 for k, v in defaults.items():
     if k not in st.session_state:
