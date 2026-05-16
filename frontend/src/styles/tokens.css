@@ -1,0 +1,139 @@
+/* MailSense Design Tokens — ported from mailsense_premium.html */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Core background */
+  --void:    #080C14;
+  --bg:      #0C1220;
+  --bg2:     #101828;
+  --bg3:     #141F30;
+  --bg4:     #192438;
+  --bg5:     #1E2A40;
+  --surface:  #0F1A2A;
+  --surface2: #142030;
+  --surface3: #1A2840;
+
+  /* Teal — primary brand */
+  --teal:      #1D9E75;
+  --teal2:     #22B585;
+  --teal3:     #27CC96;
+  --teal-dim:  #0D3D2E;
+  --teal-glow: #1D9E7518;
+  --teal-soft: #0F2E22;
+
+  /* Slate blue */
+  --slate:     #4A6FA5;
+  --slate2:    #5A82BD;
+  --slate3:    #6A95D0;
+  --slate-dim: #1A2A42;
+
+  /* Crimson / accent */
+  --crim:      #8C2020;
+  --crim2:     #A82828;
+  --crim3:     #C43030;
+  --crim4:     #D94040;
+  --crim-soft: #2A0A0A;
+  --crim-dim:  #3A1010;
+
+  /* Olive */
+  --olive:      #4A5220;
+  --olive2:     #5E6A28;
+  --olive-soft: #1E2210;
+
+  /* Text */
+  --t1: #E8EEF8;
+  --t2: #A8B4CC;
+  --t3: #6A7A94;
+  --t4: #3A4A60;
+  --t5: #2A3548;
+
+  /* Borders */
+  --b1: #1E2E48;
+  --b2: #253550;
+  --b3: #2C3E5A;
+
+  /* Sentiment */
+  --pos:    #1D9E75; --pos-bg: #0A2A1E; --pos-t: #4ABA90;
+  --neg:    #A82828; --neg-bg: #2A0A0A; --neg-t: #D96060;
+  --neu:    #4A6FA5; --neu-bg: #0F1E32; --neu-t: #7AAED8;
+
+  /* Tag colors */
+  --tag-fin-bg:   #1E2210; --tag-fin-t:   #9AAB44;
+  --tag-work-bg:  #1A2A42; --tag-work-t:  #6A95D0;
+  --tag-pers-bg:  #0A2A1E; --tag-pers-t:  #4ABA90;
+  --tag-promo-bg: #1A0A28; --tag-promo-t: #B07DD0;
+  --tag-news-bg:  #192438; --tag-news-t:  #6A7A94;
+
+  /* Typography */
+  --font: 'Sora', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+
+  /* Radii */
+  --rad:    10px;
+  --rad-sm: 7px;
+  --rad-xs: 4px;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--void);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--b3); border-radius: 3px; }
+
+/* ── Utility ── */
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Tags ── */
+.tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--rad-xs);
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.tag-fin   { background: var(--tag-fin-bg);   color: var(--tag-fin-t); }
+.tag-work  { background: var(--tag-work-bg);  color: var(--tag-work-t); }
+.tag-pers  { background: var(--tag-pers-bg);  color: var(--tag-pers-t); }
+.tag-promo { background: var(--tag-promo-bg); color: var(--tag-promo-t); }
+.tag-news  { background: var(--tag-news-bg);  color: var(--tag-news-t); }
+
+/* ── Sentiment badges ── */
+.s-pos { background: var(--pos-bg); color: var(--pos-t); }
+.s-neg { background: var(--neg-bg); color: var(--neg-t); }
+.s-neu { background: var(--neu-bg); color: var(--neu-t); }
+.sentiment-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--rad-xs);
+}
+
+/* ── Category badge + confidence bar ── */
+.cat-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .5px;
+}
+.cat-account_alerts     { background: #fef3c7; color: #d97706; }
+.cat-career_personal    { background: #fef9c3; color: #854d0e; }
+.cat-finance_legal      { background: #dbeafe; color: #1d4ed8; }
+.cat-marketing_outreach { background: #ffedd5; color: #c2410c; }
+.cat-work_operations    { background: #dcfce7; color: #15803d; }
+.cat-unknown            { background: #f3f4f6; color: #6b7280; }
+
+.conf-bar-wrap { background: #f3f4f6; border-radius: 6px; height: 8px; width: 100%; margin: 2px 0 6px; }
+.conf-bar      { height: 8px; border-radius: 6px; background: linear-gradient(90deg, #6366f1, #8b5cf6); }
