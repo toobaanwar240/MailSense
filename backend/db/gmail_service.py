@@ -119,11 +119,11 @@ def fetch_user_emails(db, user_id: int, max_results: int = 100) -> int:
             "q": final_query,  # single clean query, never overwritten
         }
 
-        print(f"📨 Gmail query: {final_query}")
+        print(f"Gmail query: {final_query}")
 
         results = service.users().messages().list(**list_params).execute()
         messages = results.get("messages", [])
-        print(f"📬 Gmail returned {len(messages)} messages")
+        print(f" Gmail returned {len(messages)} messages")
 
         if not messages:
             return 0
@@ -159,7 +159,7 @@ def fetch_user_emails(db, user_id: int, max_results: int = 100) -> int:
 
             # Fix: only check INBOX, drop CATEGORY_PERSONAL requirement
             if "INBOX" not in labels:
-                print(f"⏭️ Skipping non-INBOX: {subject[:50]}")
+                print(f" Skipping non-INBOX: {subject[:50]}")
                 continue
 
             body = extract_body(msg_data["payload"])
@@ -185,11 +185,11 @@ def fetch_user_emails(db, user_id: int, max_results: int = 100) -> int:
             db.refresh(email)
             saved_count += 1
 
-        print(f"✅ Saved {saved_count}, skipped {skipped_count} for user {user_id}")
+        print(f"Saved {saved_count}, skipped {skipped_count} for user {user_id}")
         return saved_count
 
     except Exception as e:
-        print(f"❌ Error fetching emails: {e}")
+        print(f"Error fetching emails: {e}")
         import traceback
         traceback.print_exc()
         return 0
@@ -197,7 +197,6 @@ def fetch_user_emails(db, user_id: int, max_results: int = 100) -> int:
 def fetch_all_user_emails(db, user_id: int, max_results: int = 500) -> int:
     """
     Fetch ALL INBOX emails for a user (not just new ones).
-    Useful for initial setup or re-sync.
     """
     try:
         service = get_gmail_service(db, user_id)
@@ -216,7 +215,7 @@ def fetch_all_user_emails(db, user_id: int, max_results: int = 500) -> int:
         print(f" Gmail returned {len(messages)} INBOX messages")
         
         if not messages:
-            print("ℹ No messages found")
+            print("No messages found")
             return 0
         
         saved_count = 0

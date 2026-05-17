@@ -15,16 +15,6 @@ def generate_email_reply(
     your_name: str = "Assistant",
     tone: str = "professional",
 ) -> dict:
-    """
-    Use Claude to read an email, detect its intent, and write a suitable reply.
-
-    Returns:
-        {
-            "reply_subject": str,
-            "reply_body":    str,
-            "detected_intent": str   # e.g. 'complaint', 'inquiry', 'follow-up'
-        }
-    """
     prompt = f"""You are an expert email assistant. Carefully read the email below and do two things:
 
 1. Detect the primary intent of the email. Choose the single best label from:

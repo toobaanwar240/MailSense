@@ -1,0 +1,263 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Dark Theme (Default) - Obsidian & Forest Smoke & Ruby */
+  --void:      #08090A; /* Darker than Obsidian for ultimate background */
+  --bg:        #0D1216; /* Obsidian */
+  --bg2:       #151A1E;
+  --bg3:       #1C2329;
+  --bg4:       #242D34;
+  --surface:   #15191C;
+  --surface2:  #212529;
+  --surface3:  #30332F; /* Forest Smoke */
+
+  /* Ruby — primary brand */
+  --maroon:      #3B0011;
+  --maroon2:     #4A0016; /* Ruby */
+  --maroon3:     #5E001C;
+  --maroon4:     #730022;
+  --maroon-dim:  #1C0008;
+  --maroon-glow: #4A001633;
+  --maroon-soft: #33000E;
+
+  /* Premium Obsidian, Slate, and Maroon Gradients */
+  --panel-gradient: linear-gradient(135deg, #0A0A0C 0%, #15151A 50%, #200D12 100%);
+  --ai-bubble-gradient: linear-gradient(135deg, #070709 0%, #0E0E12 50%, #1A0A0F 100%);
+  --card-gradient: linear-gradient(135deg, #0A0A0C 0%, #16161C 50%, #250B10 100%);
+  --ai-panel-gradient: linear-gradient(135deg, #08080A 0%, #121217 50%, #1E090D 100%);
+
+  /* Slate/Charcoal -> Mist/Forest variants */
+  --slate:       #40443F;
+  --slate2:      #50554F;
+  --slate3:      #60665E;
+  --slate-dim:   #20221F;
+
+  /* Accent alternatives (subtle for tags) */
+  --olive:       #4A5220;
+  --olive-soft:  #1E2210;
+  --teal-dim:    #0D3D2E;
+  --teal-soft:   #0F2E22;
+  
+  /* Text */
+  --t1: #FFE6E6; /* Rose Ivory */
+  --t2: #E6CECE;
+  --t3: #C1C1BD; /* Mist */
+  --t4: #A3A39F;
+  --t5: #858582;
+
+  /* Borders */
+  --b1: #1E2429;
+  --b2: #2B333A;
+  --b3: #3B454E;
+
+  /* Sentiment */
+  --pos:    #1D9E75; --pos-bg: #0A2A1E; --pos-t: #4ABA90;
+  --neg:    #A82828; --neg-bg: #2A0A0A; --neg-t: #D96060;
+  --neu:    #6A7A94; --neu-bg: #141F30; --neu-t: #A8B4CC;
+
+  /* Tag colors (redefined for new palette) */
+  --tag-fin-bg:   #231F13; --tag-fin-t:   #CCA85C;
+  --tag-work-bg:  #141F30; --tag-work-t:  #6A95D0;
+  --tag-pers-bg:  #0A2A1E; --tag-pers-t:  #4ABA90;
+  --tag-promo-bg: #221430; --tag-promo-t: #A87DD0;
+  --tag-news-bg:  #1D2024; --tag-news-t:  #8C97A6;
+
+  /* Typography */
+  --font: 'Inter', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+
+  /* Radii */
+  --rad-lg: 16px;
+  --rad:    12px;
+  --rad-sm: 8px;
+  --rad-xs: 4px;
+}
+
+[data-theme="light"] {
+  /* Light Theme */
+  --void:      #FAFAFA;
+  --bg:        #F5F5F5;
+  --bg2:       #EEEEEE;
+  --bg3:       #E5E5E5;
+  --bg4:       #DDDDDD;
+  --surface:   #FFFFFF;
+  --surface2:  #F8F8F8;
+  --surface3:  #F0F0F0;
+
+  /* Ruby — primary brand */
+  --maroon:      #4A0016; /* Ruby */
+  --maroon2:     #5E001C;
+  --maroon3:     #730022;
+  --maroon-dim:  #F5E6EA;
+  --maroon-glow: #4A001622;
+  --maroon-soft: #EBCAD2;
+
+  --panel-gradient: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 50%, #FDECEC 100%);
+  --ai-bubble-gradient: linear-gradient(135deg, #FFFFFF 0%, #F8F8F8 50%, #F5E6EA 100%);
+  --card-gradient: linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 50%, #DEE2E6 100%);
+  --ai-panel-gradient: linear-gradient(135deg, #FFFFFF 0%, #F1F3F5 50%, #E9ECEF 100%);
+
+  /* Slate/Charcoal -> Forest Smoke variants for light */
+  --slate:       #C1C1BD; /* Mist */
+  --slate2:      #A3A39F;
+  --slate3:      #858582;
+  --slate-dim:   #EAEAE8;
+
+  /* Text */
+  --t1: #0D1216; /* Obsidian */
+  --t2: #1C2329;
+  --t3: #30332F; /* Forest Smoke */
+  --t4: #50554F;
+  --t5: #70776F;
+
+  /* Borders */
+  --b1: #E0E0DF;
+  --b2: #D1D1CD;
+  --b3: #C1C1BD; /* Mist */
+
+  /* Sentiment */
+  --pos-bg: #E6F5EE; --pos-t: #1D9E75;
+  --neg-bg: #FDECEC; --neg-t: #A82828;
+  --neu-bg: #F0F4F8; --neu-t: #4A6FA5;
+
+  /* Tag colors */
+  --tag-fin-bg:   #FFF8E6; --tag-fin-t:   #B38200;
+  --tag-work-bg:  #EBF2FA; --tag-work-t:  #2D6BB5;
+  --tag-pers-bg:  #E6F5EE; --tag-pers-t:  #1D9E75;
+  --tag-promo-bg: #F5EEFC; --tag-promo-t: #8533D6;
+  --tag-news-bg:  #F0F2F5; --tag-news-t:  #4A5A70;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--void);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: 13px;
+  overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--b3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--t4); }
+
+/* ── Utility ── */
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Glassmorphism */
+.glass-panel {
+  background: var(--surface);
+  border: 1px solid var(--b1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+.glass-panel:hover {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .glass-panel {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+[data-theme="light"] .glass-panel:hover {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08);
+}
+
+/* We need RGB values for the glass background if we use rgba. Let's just use CSS variables directly if possible, or slight opacity. */
+/* A trick for glassmorphism without RGB variables is to use a very subtle background and rely heavily on backdrop-filter. */
+.glass {
+  background: var(--surface);
+  /* Fallback if browser doesn't support backdrop-filter */
+}
+@supports (backdrop-filter: blur(12px)) {
+  .glass {
+    background: transparent;
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  [data-theme="light"] .glass {
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.4) 100%);
+  }
+}
+
+/* ── Tags ── */
+.tag {
+  display: inline-block;
+  font-size: 10.5px;
+  padding: 3px 10px;
+  border-radius: var(--rad-xs);
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.tag-fin   { background: var(--tag-fin-bg);   color: var(--tag-fin-t); }
+.tag-work  { background: var(--tag-work-bg);  color: var(--tag-work-t); }
+.tag-pers  { background: var(--tag-pers-bg);  color: var(--tag-pers-t); }
+.tag-promo { background: var(--tag-promo-bg); color: var(--tag-promo-t); }
+.tag-news  { background: var(--tag-news-bg);  color: var(--tag-news-t); }
+
+/* ── Sentiment badges ── */
+.s-pos { background: var(--pos-bg); color: var(--pos-t); }
+.s-neg { background: var(--neg-bg); color: var(--neg-t); }
+.s-neu { background: var(--neu-bg); color: var(--neu-t); }
+.sentiment-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--rad-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Category badge + confidence bar ── */
+.cat-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.cat-account_alerts     { background: #FFF3CD; color: #856404; }
+.cat-career_personal    { background: #E2E3E5; color: #383D41; }
+.cat-finance_legal      { background: #CCE5FF; color: #004085; }
+.cat-marketing_outreach { background: #F8D7DA; color: #721C24; }
+.cat-work_operations    { background: #D4EDDA; color: #155724; }
+.cat-unknown            { background: var(--bg3); color: var(--t3); }
+
+[data-theme="dark"] .cat-account_alerts     { background: #2C2410; color: #D4A828; }
+[data-theme="dark"] .cat-career_personal    { background: #1C1E20; color: #A4A9AE; }
+[data-theme="dark"] .cat-finance_legal      { background: #101E2C; color: #6A95D0; }
+[data-theme="dark"] .cat-marketing_outreach { background: #2C1618; color: #D96060; }
+[data-theme="dark"] .cat-work_operations    { background: #12281A; color: #4ABA90; }
+
+.conf-bar-wrap { background: var(--bg3); border-radius: 6px; height: 6px; width: 100%; margin: 4px 0 8px; overflow: hidden; }
+.conf-bar      { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--maroon3), var(--maroon2)); transition: width 0.4s ease; }
+
+/* ── No scrollbars utility ── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+/* ── Email Card Hover ── */
+.email-card {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.email-card:hover {
+  background: var(--surface2) !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+  border-bottom-color: var(--maroon3) !important;
+  z-index: 10;
+}

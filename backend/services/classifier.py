@@ -6,7 +6,6 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 # Path to your model
 MODEL_PATH = os.path.join("models", "MAILSENSE_FINAL_MODEL")
 
-# Category colors for UI — updated to match new labels
 CATEGORY_COLORS = {
    "account_alerts":    "🔔",
     "career_personal":   "🎯",
@@ -18,7 +17,7 @@ CATEGORY_COLORS = {
 
 class EmailClassifier:
     def __init__(self):
-        print("🤖 Loading email classifier model...")
+        print(" Loading email classifier model...")
         try:
             # Load label map
             label_map_path = os.path.join(MODEL_PATH, "label_mapping.json")
@@ -27,16 +26,16 @@ class EmailClassifier:
                 # Support both flat and nested formats
                 self.label_map = data.get("id2label", data)
 
-            print(f"✅ Label map loaded: {self.label_map}")
+            print(f"Label map loaded: {self.label_map}")
 
             # Load tokenizer and model
             self.tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
             self.model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
             self.model.eval()
 
-            print("✅ Email classifier ready!")
+            print(" Email classifier ready!")
         except Exception as e:
-            print(f"❌ Failed to load classifier: {e}")
+            print(f" Failed to load classifier: {e}")
             self.model = None
             self.tokenizer = None
             self.label_map = {}
@@ -46,7 +45,7 @@ class EmailClassifier:
         Classify an email and return category + confidence.
         """
         if not self.model or not self.tokenizer:
-            print("❌ Model not loaded — returning unknown")
+            print(" Model not loaded — returning unknown")
             return {
                 "category": "unknown",
                 "confidence": 0.0,
@@ -58,7 +57,7 @@ class EmailClassifier:
             # Combine subject and body
             text = f"{subject} {body[:500]}"
 
-            print(f"🔍 Classifying: {subject[:50]}")
+            print(f" Classifying: {subject[:50]}")
 
             # Tokenize
             inputs = self.tokenizer(
@@ -80,7 +79,7 @@ class EmailClassifier:
             top_prob = probs[top_idx].item()
             category = self.label_map.get(str(top_idx), "unknown")
 
-            print(f"✅ Result: {category} ({round(top_prob * 100, 1)}%)")
+            print(f"Result: {category} ({round(top_prob * 100, 1)}%)")
 
             # Get all scores
             all_scores = {
@@ -96,7 +95,7 @@ class EmailClassifier:
             }
 
         except Exception as e:
-            print(f"❌ Classification error: {e}")
+            print(f"Classification error: {e}")
             return {
                 "category": "unknown",
                 "confidence": 0.0,

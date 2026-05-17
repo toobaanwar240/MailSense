@@ -1,7 +1,4 @@
-"""
-RAG Router - Endpoints for RAG-based email search
-✅ Updated to use RAGBackgroundService (non-blocking indexing)
-"""
+
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -12,13 +9,13 @@ import traceback
 from backend.db.database import get_db
 from backend.db.models import User, Email
 
-# ✅ Import BOTH the background service AND rag_system (for direct queries)
+
 try:
     from backend.RAG.rag_service import rag_system
     from backend.RAG.rag_backgroundservice import rag_service   # ← NEW
-    print("✅ RAG system + background service imported successfully")
+    print(" RAG system + background service imported successfully")
 except ImportError as e:
-    print(f"❌ Failed to import RAG modules: {e}")
+    print(f" Failed to import RAG modules: {e}")
     raise
 
 try:
@@ -31,10 +28,10 @@ try:
             return user.email_address
         raise HTTPException(status_code=500, detail="User has no email field")
 
-    print("✅ Using JWT authentication")
+    print("Using JWT authentication")
 
 except ImportError:
-    print("⚠️  JWT auth not found, using fallback")
+    print(" JWT auth not found, using fallback")
 
     def get_current_user_email(db: Session = Depends(get_db)) -> str:
         user = db.query(User).first()
@@ -46,34 +43,30 @@ except ImportError:
 router = APIRouter()
 
 
-# ================= Request Models =================
+# Request Models 
 
 class RAGQuestionRequest(BaseModel):
     question: str
 
 
-# ================= RAG Endpoints =================
+#RAG Endpoints
 
 @router.post("/index")
 def rag_index(
     current_user_email: str = Depends(get_current_user_email),
 ):
-    """
-    ✅ CHANGED: No longer blocks the request doing indexing inline.
-    Queues the user for background indexing and returns immediately.
-    The frontend should poll /rag/status to know when it's ready.
-    """
-    print(f"\n📊 /rag/index called for user: {current_user_email}")
+    
+    print(f" /rag/index called for user: {current_user_email}")
 
     try:
-        # ✅ CHANGED: queue instead of blocking index
+        
         rag_service.request_index(current_user_email)
         return {
             "status": "queued",
             "message": "Indexing queued in background. Poll /rag/status for progress."
         }
     except Exception as e:
-        print(f"❌ ERROR in /rag/index: {e}")
+        print(f" ERROR in /rag/index: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to queue indexing: {str(e)}")
 
@@ -82,27 +75,12 @@ def rag_index(
 def rag_status(
     current_user_email: str = Depends(get_current_user_email),
 ):
-    """
-    ✅ NEW: Poll this to check if indexing is complete.
-    
-    Possible status values:
-      - "idle"       → not started yet (call /rag/index first)
-      - "indexing"   → currently running in background
-      - "ready"      → done, queries will work
-      - "error"      → indexing failed (app still works, RAG unavailable)
-    
-    Frontend usage:
-        setInterval(() => {
-            fetch('/rag/status').then(r => r.json()).then(s => {
-                if (s.is_ready) clearInterval(...)
-            })
-        }, 3000)
-    """
-    print(f"\n📡 /rag/status called for user: {current_user_email}")
+   
+    print(f"\n/rag/status called for user: {current_user_email}")
     try:
         return rag_service.get_status(current_user_email)
     except Exception as e:
-        print(f"❌ ERROR in /rag/status: {e}")
+        print(f" ERROR in /rag/status: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -116,7 +94,7 @@ def rag_ask(
     current_user_email: str = Depends(get_current_user_email),
     db: Session = Depends(get_db)
 ):
-    print(f"\n❓ /rag/ask called: '{request.question}' for user: {current_user_email}")
+    print(f"\n/rag/ask called: '{request.question}' for user: {current_user_email}")
 
     if not request.question or not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
@@ -149,13 +127,13 @@ def rag_ask(
         }
 
     try:
-        # ✅ Get or create history for this user
+        # Get  history for this user
         if current_user_email not in conversation_histories:
             conversation_histories[current_user_email] = []
 
         history = conversation_histories[current_user_email]
 
-        # ✅ Pass history to answer_question
+        # Pass history to answer_question
         result = rag_system.answer_question(
             current_user_email,
             request.question,
@@ -163,7 +141,7 @@ def rag_ask(
             conversation_history=history
         )
 
-        # ✅ Update history after getting answer
+        #  Update history after getting answer
         if result.get("status") == "success":
             history.append({"role": "user", "content": request.question})
             history.append({"role": "assistant", "content": result["answer"]})
@@ -171,11 +149,11 @@ def rag_ask(
             # Keep only last 20 messages
             conversation_histories[current_user_email] = history[-20:]
 
-        print("✅ Answer generated")
+        print("Answer generated")
         return result
 
     except Exception as e:
-        print(f"❌ ERROR in /rag/ask: {e}")
+        print(f"ERROR in /rag/ask: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Question processing failed: {str(e)}")
 
@@ -183,32 +161,26 @@ def rag_ask(
 def rag_stats(
     current_user_email: str = Depends(get_current_user_email),
 ):
-    """
-    Get RAG statistics for the current user.
-    ✅ CHANGED: Now merges background service status with rag_system stats.
-    """
-    print(f"\n📈 /rag/stats called for user: {current_user_email}")
+    
+    print(f"\n /rag/stats called for user: {current_user_email}")
     try:
-        # ✅ CHANGED: get_status already merges rag_system.get_stats() internally
+
         return rag_service.get_status(current_user_email)
     except Exception as e:
-        print(f"❌ ERROR in /rag/stats: {e}")
+        print(f"ERROR in /rag/stats: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Stats retrieval failed: {str(e)}")
 
 
-# ================= Admin Endpoints =================
+#  Admin Endpoints 
 
 @router.get("/admin/status")
 def admin_status(
     current_user_email: str = Depends(get_current_user_email),
     db: Session = Depends(get_db)
 ):
-    """
-    Get comprehensive system status.
-    ✅ CHANGED: Background service status included in response.
-    """
-    print(f"\n🔍 /rag/admin/status called for user: {current_user_email}")
+    
+    print(f"\n /rag/admin/status called for user: {current_user_email}")
 
     try:
         user = db.query(User).filter(User.email == current_user_email).first()
@@ -223,7 +195,7 @@ def admin_status(
         except Exception:
             unread, read = [], all_emails
 
-        # ✅ CHANGED: use background service status (includes rag_system stats)
+        # use background service status 
         service_status = rag_service.get_status(current_user_email)
 
         return {
@@ -236,7 +208,7 @@ def admin_status(
                 "unread_emails": len(unread),
                 "read_emails": len(read),
             },
-            "rag": service_status,   # ✅ richer than before — includes indexing progress
+            "rag": service_status,   
         }
 
     except HTTPException:
@@ -247,15 +219,12 @@ def admin_status(
         raise HTTPException(status_code=500, detail=f"Status retrieval failed: {str(e)}")
 
 
-# ================= Health Check =================
+# Health Check
 
 @router.get("/health")
 def rag_health():
-    """
-    RAG system health check.
-    ✅ CHANGED: Also reports background service thread health.
-    """
-    print("\n❤️ /rag/health called")
+    
+    print("\n /rag/health called")
 
     try:
         is_initialized = (
@@ -264,7 +233,7 @@ def rag_health():
             hasattr(rag_system, 'groq_client')
         )
 
-        # ✅ NEW: check background thread is alive
+        # check background thread is alive
         thread_alive = (
             rag_service._thread is not None and
             rag_service._thread.is_alive()
@@ -278,10 +247,10 @@ def rag_health():
             "background_thread_alive": thread_alive,
             "cache_size": cache_size,
         }
-        print(f"✅ Health check: {result}")
+        print(f"Health check: {result}")
         return result
 
     except Exception as e:
-        print(f"❌ Health check error: {e}")
+        print(f" Health check error: {e}")
         traceback.print_exc()
         return {"status": "unhealthy", "error": str(e)}

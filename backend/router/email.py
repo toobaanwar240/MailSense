@@ -82,8 +82,8 @@ def sync_inbox(
                 body=body
             )
             db.add(email_db)
-            db.commit()  # ✨ Commit before ingesting
-            db.refresh(email_db)  #  Refresh to get the ID
+            db.commit()  
+            db.refresh(email_db) 
             
             #  INGEST INTO VECTOR STORE
             saved_count += 1
@@ -95,7 +95,7 @@ def sync_inbox(
 
 
 
-#  List unread emails (snippet only)
+#  List unread emails 
 
 @router.get("/list")
 def list_unread_emails(
@@ -110,7 +110,7 @@ def list_unread_emails(
         emails = (
             db.query(Email)
             .filter(Email.user_id == current_user.id)
-            .order_by(nullslast(Email.date.desc()), Email.id.desc()) # ✅ CHANGED: date instead of id
+            .order_by(nullslast(Email.date.desc()), Email.id.desc()) 
             .limit(max_results)
             .all()
         )
@@ -123,8 +123,8 @@ def list_unread_emails(
                 "subject": e.subject,
                 "snippet": e.snippet,
                 "body": e.body,
-                "date": str(e.date),  # ✅ ADDED: Include date in response
-                "is_read": e.is_read if hasattr(e, 'is_read') else None  # ✅ ADDED: Include read status
+                "date": str(e.date), 
+                "is_read": e.is_read if hasattr(e, 'is_read') else None  
             })
 
         return {"emails": email_list, "count": len(email_list)}
@@ -184,7 +184,7 @@ def send_email(
         raise HTTPException(status_code=500, detail=str(e))
 
  
-#================ RAG =================
+# RAG
 
 @router.post("/rag/index")
 def rag_index(
@@ -209,7 +209,7 @@ def rag_stats(current_user: str = Depends(get_current_user)):
     """Get RAG statistics."""
     return rag_system.get_stats(current_user)
 
-# ================= ADMIN =================
+#  ADMIN 
 
 @router.get("/admin/status")
 def admin_status(

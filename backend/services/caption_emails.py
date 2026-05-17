@@ -6,9 +6,7 @@ from backend.services.email_processor import preprocess_email
 
 # Load variables from .env file
 load_dotenv()
-
-# Get API key from environment variable
-GROQ_API_KEY = st.secrets["groq"]["api_key"] if "groq" in st.secrets else os.getenv("GROQ_API_KEY")
+GROQ_API_KEY =  os.getenv("GROQ_API_KEY")
 
 if not GROQ_API_KEY:
     raise ValueError("Groq API key not found in .env or Streamlit secrets.")
@@ -17,17 +15,9 @@ if not GROQ_API_KEY:
 client = Groq.Client(api_key=GROQ_API_KEY)
 
 def caption_email(text):
-    """
-    Generate a short caption/title for the email.
     
-    Args:
-        text (str): Email content
-    
-    Returns:
-        str: Short caption describing the email
-    """
     try:
-        # Preprocess for captioning (can use fewer tokens)
+        # Preprocess for captioning 
         processed_text = preprocess_email(text, max_tokens=3000)
         
         response = client.chat.completions.create(

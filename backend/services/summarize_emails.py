@@ -8,24 +8,16 @@ from backend.services.email_processor import preprocess_email
 load_dotenv()
 
 # Get API key from environment variable
-GROQ_API_KEY = st.secrets["groq"]["api_key"] if "groq" in st.secrets else os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not GROQ_API_KEY:
-    raise ValueError("Groq API key not found in .env or Streamlit secrets.")
+    raise ValueError("Groq API key not found in .env ")
 
 # Initialize Groq client
 client = Groq.Client(api_key=GROQ_API_KEY)
 
 def summarize_email(text):
-    """
-    Summarize email with proper preprocessing and error handling.
-    
-    Args:
-        text (str): Email content to summarize
-    
-    Returns:
-        str: Email summary
-    """
+   
     try:
         # Preprocess the email (clean + truncate)
         processed_text = preprocess_email(text, max_tokens=5000)

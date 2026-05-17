@@ -5,13 +5,13 @@ from enum import Enum
 from typing import Optional, Dict
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
-from backend.RAG.rag_service import rag_system   # your RAG instance
-from backend.db.database import SessionLocal       # your DB session factory
+from backend.RAG.rag_service import rag_system   
+from backend.db.database import SessionLocal       
 
 logger = logging.getLogger(__name__)
 
 
-# Status enum — lets the app know exactly what the RAG service is doing
+# Status enum ;lets the app know exactly what the RAG service is doing
 
 
 class RAGStatus(str, Enum):
@@ -22,9 +22,9 @@ class RAGStatus(str, Enum):
     RATE_LIMITED = "rate_limited" # Groq rate limited
 
 
-# ---------------------------------------------------------------------------
+
 # Background RAG Service
-# ---------------------------------------------------------------------------
+
 
 class RAGBackgroundService:
     
@@ -49,9 +49,9 @@ class RAGBackgroundService:
         self._pending_users: set = set()
         self._pending_lock = threading.Lock()
 
-    # ------------------------------------------------------------------
+   
     # Public API
-    # ------------------------------------------------------------------
+    
 
     def start(self):
         """
@@ -69,11 +69,11 @@ class RAGBackgroundService:
             daemon=True        # dies automatically when main process exits
         )
         self._thread.start()
-        logger.info("✅ RAG background service started (non-blocking).")
+        logger.info(" RAG background service started (non-blocking).")
 
     def stop(self):
         """Signal the background thread to stop gracefully."""
-        logger.info("🛑 Stopping RAG background service...")
+        logger.info(" Stopping RAG background service...")
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=10)
@@ -86,7 +86,7 @@ class RAGBackgroundService:
         """
         with self._pending_lock:
             self._pending_users.add(user_email)
-        logger.info(f"📥 Queued RAG index for {user_email}")
+        logger.info(f"Queued RAG index for {user_email}")
 
     def get_status(self, user_email: str) -> Dict:
         """
@@ -115,9 +115,9 @@ class RAGBackgroundService:
         with self._lock:
             return self._status.get(user_email) == RAGStatus.READY
 
-    # ------------------------------------------------------------------
+
     # Background loop
-    # ------------------------------------------------------------------
+    
 
     def _background_loop(self):
         """
@@ -126,13 +126,13 @@ class RAGBackgroundService:
           2. Sleep for reindex_interval, then re-index all known users.
           3. Repeat until stop() is called.
         """
-        logger.info("🔄 RAG background loop running...")
+        logger.info(" RAG background loop running...")
 
         # Brief startup delay so the app fully initialises its DB pool first
         time.sleep(3)
 
         while not self._stop_event.is_set():
-            # --- Process any users queued via request_index() ---
+            #  Process any users queued via request_index() 
             with self._pending_lock:
                 pending = list(self._pending_users)
                 self._pending_users.clear()
@@ -142,7 +142,7 @@ class RAGBackgroundService:
                     break
                 self._index_user_with_retry(user_email)
 
-            # --- Periodic re-index of all known users ---
+            # Periodic re-index of all known users 
             known_users = []
             with self._lock:
                 known_users = list(self._status.keys())
@@ -156,7 +156,7 @@ class RAGBackgroundService:
                 if current == RAGStatus.READY:
                     self._index_user_with_retry(user_email)
 
-            # --- Sleep until next cycle (or until stop() is called) ---
+            # Sleep until next cycle
             self._stop_event.wait(timeout=self.reindex_interval)
 
         logger.info("RAG background loop exited.")
@@ -186,23 +186,23 @@ class RAGBackgroundService:
                     "index_time_seconds": result.get("time_seconds", 0),
                     "message": result.get("message", ""),
                 })
-                logger.info(f"✅ RAG index done for {user_email}: {result.get('message')}")
-                return   # success — exit retry loop
+                logger.info(f"RAG index done for {user_email}: {result.get('message')}")
+                return   
 
             except Exception as e:
-                logger.error(f"❌ RAG index attempt {attempt}/{self.max_retries} "
+                logger.error(f"RAG index attempt {attempt}/{self.max_retries} "
                              f"failed for {user_email}: {e}")
 
                 if attempt < self.max_retries:
-                    backoff = self.retry_delay * attempt   # 30s, 60s, 90s...
-                    logger.info(f"⏳ Retrying in {backoff}s...")
+                    backoff = self.retry_delay * attempt   # 30s, 60s, 90s..
+                    logger.info(f"Retrying in {backoff}s...")
                     self._stop_event.wait(timeout=backoff)
                 else:
                     self._set_status(user_email, RAGStatus.ERROR, {
                         "error": str(e),
                         "failed_at": time.time(),
                     })
-                    logger.error(f"💥 RAG indexing permanently failed for {user_email}. "
+                    logger.error(f"RAG indexing permanently failed for {user_email}. "
                                  f"App still works — RAG just unavailable.")
 
     def _set_status(self, user_email: str, status: RAGStatus, extra: Dict = None):
@@ -211,20 +211,13 @@ class RAGBackgroundService:
             self._progress[user_email] = extra or {}
 
 
-# ---------------------------------------------------------------------------
-# Global singleton
-# ---------------------------------------------------------------------------
 rag_service = RAGBackgroundService(
     reindex_interval_seconds=300,   # re-index every 15 minutes
     retry_delay_seconds=30,
     max_retries=3,
 )
 
-
-# ---------------------------------------------------------------------------
 # FastAPI integration helpers
-# ---------------------------------------------------------------------------
-
 @asynccontextmanager
 async def lifespan(app):
     rag_service.start()

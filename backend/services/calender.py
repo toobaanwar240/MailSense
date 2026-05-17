@@ -13,10 +13,10 @@ import streamlit as st
 # Load variables from .env file
 load_dotenv()
 # Get API key from environment variable
-GROQ_API_KEY = st.secrets["groq"]["api_key"] if "groq" in st.secrets else os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not GROQ_API_KEY:
-    raise ValueError("Groq API key not found in .env or Streamlit secrets.")
+    raise ValueError("Groq API key not found in .env")
 
 # Initialize Groq client
 client = Groq.Client(api_key=GROQ_API_KEY)
@@ -126,7 +126,7 @@ def process_email(email_text):
         # Create event times in Karachi timezone
         karachi_tz = pytz.timezone("Asia/Karachi")
         start_time = datetime.fromisoformat(start_str)
-        start_time = karachi_tz.localize(start_time)  # Localize to Karachi
+        start_time = karachi_tz.localize(start_time)  
         end_time = start_time + timedelta(hours=1)
 
         # Create event

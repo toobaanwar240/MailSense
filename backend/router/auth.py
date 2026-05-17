@@ -31,7 +31,7 @@ TOKEN_INFO_URL = "https://www.googleapis.com/oauth2/v3/tokeninfo"
 
 
 @router.get("/login")
-async def google_login():  # ✅ Changed from def to async def
+async def google_login():
     """Initiate Google OAuth login - ASYNC version."""
     params = {
         "client_id": CLIENT_ID,
@@ -46,10 +46,8 @@ async def google_login():  # ✅ Changed from def to async def
 
 
 @router.get("/callback")
-async def auth_callback(code: str, db: Session = Depends(get_db)):  # ✅ Changed from def to async def
-    """Handle Google OAuth callback - ASYNC version."""
+async def auth_callback(code: str, db: Session = Depends(get_db)):  
     
-    # ✅ Use async HTTP client instead of requests
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Prepare token exchange data
         data = {
@@ -60,7 +58,7 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):  # ✅ Change
             "grant_type": "authorization_code",
         }
         
-        # ✅ Changed from requests.post to await client.post
+        
         token_response = await client.post(TOKEN_URL, data=data)
 
         if token_response.status_code != 200:
@@ -88,7 +86,7 @@ async def auth_callback(code: str, db: Session = Depends(get_db)):  # ✅ Change
         if not email:
             raise HTTPException(status_code=400, detail="Email not found in Google response")
 
-        # Database operation (synchronous, but that's OK)
+        # Database operation 
         user = create_or_update_user(
             db=db,
             google_user_id=google_user_id,

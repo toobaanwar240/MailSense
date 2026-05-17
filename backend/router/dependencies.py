@@ -12,7 +12,7 @@ bearer_scheme = HTTPBearer()
  # your login endpoint
 
 SECRET_KEY = "supersecret12345"  # same key used to sign your JWT
-ALGORITHM = "HS256"  # or your algorithm
+ALGORITHM = "HS256" 
 
 def create_jwt(user_id: int):
     payload = {

@@ -43,10 +43,6 @@ def _extract_json_text(text: str) -> str:
 
 
 def analyze_sentiment(subject: str, body: str) -> dict:
-    """
-    Analyze the sentiment of an email using Groq API.
-    Returns sentiment label, confidence, emoji, and explanation.
-    """
     if not GROQ_API_KEY:
         return {
             "sentiment": "unknown",
@@ -114,7 +110,7 @@ Rules:
         }
 
     except json.JSONDecodeError as e:
-        print(f"❌ JSON parse error: {e} | Raw: {raw}")
+        print(f"JSON parse error: {e} | Raw: {raw}")
         return {
             "sentiment": "unknown",
             "confidence": 0.0,
@@ -123,7 +119,7 @@ Rules:
             "tone_tags": []
         }
     except Exception as e:
-        print(f"❌ Sentiment analysis error: {e}")
+        print(f" Sentiment analysis error: {e}")
         return {
             "sentiment": "unknown",
             "confidence": 0.0,

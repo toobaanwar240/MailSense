@@ -57,7 +57,6 @@ def get_mime_message(service, user_id, msg_id):
 def get_email_content(mime_msg):
     """
     Extracts the body content from a MIME message safely.
-    Handles different encodings & avoids UnicodeDecodeError.
     Returns plain text if available, otherwise HTML.
     """
     def safe_decode(part):
@@ -70,7 +69,7 @@ def get_email_content(mime_msg):
                     return payload.decode(charset, errors="replace")
                 except:
                     pass
-            # Fallback to UTF-8 safe decode
+            
             return payload.decode("utf-8", errors="replace")
         return ""
 
@@ -79,15 +78,15 @@ def get_email_content(mime_msg):
             content_type = part.get_content_type()
             content_disposition = str(part.get("Content-Disposition"))
 
-            # Skip attachments
+            
             if "attachment" in content_disposition:
                 continue
 
-            # Prefer plain text
+           
             if content_type == "text/plain":
                 return safe_decode(part)
 
-        # Fallback: try HTML
+        
         for part in mime_msg.walk():
             if part.get_content_type() == "text/html":
                 return safe_decode(part)

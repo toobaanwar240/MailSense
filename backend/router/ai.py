@@ -29,8 +29,8 @@ class EmailReplyRequest(BaseModel):
 
 class NewEmailRequest(BaseModel):
     to: str
-    topic: str                        # what the email is about
-    tone: str = "professional"        # professional | formal | casual
+    topic: str                       
+    tone: str = "professional"       
     additional_context: str = "" 
     
 class CalendarEventRequest(BaseModel):

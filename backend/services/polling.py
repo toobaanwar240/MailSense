@@ -9,23 +9,23 @@ polling_threads: dict = {}
 
 def _auto_index_after_fetch(user_email: str):
     rag_service.request_index(user_email)
-    print(f"  📊 Re-index queued for {user_email}")
+    print(f"   Re-index queued for {user_email}")
 
 def _poll_emails_continuously(user_id: int, user_email: str, interval: int = 60):
-    print(f"🔄 Polling thread started for user {user_id} ({user_email})")
+    print(f"Polling thread started for user {user_id} ({user_email})")
     while True:
         db = SessionLocal()
         try:
             ts = datetime.now().strftime('%H:%M:%S')
-            print(f"⏰ [{ts}] Fetching emails for user {user_id}...")
+            print(f"[{ts}] Fetching emails for user {user_id}...")
             new_count = fetch_user_emails(db, user_id)
             if new_count > 0:
-                print(f"✅ [{ts}] Fetched {new_count} new emails")
+                print(f"[{ts}] Fetched {new_count} new emails")
                 _auto_index_after_fetch(user_email)
             else:
-                print(f"ℹ️  [{ts}] No new emails")
+                print(f"  [{ts}] No new emails")
         except Exception as e:
-            print(f"❌ Polling error for user {user_id}: {e}")
+            print(f" Polling error for user {user_id}: {e}")
         finally:
             db.close()
         time.sleep(interval)
@@ -41,7 +41,7 @@ def on_new_user_login(user_id: int, user_email: str):
         )
         thread.start()
         polling_threads[user_id] = thread
-        print(f"✅ Polling thread started for new user {user_id} ({user_email})")
+        print(f" Polling thread started for new user {user_id} ({user_email})")
 
 def start_polling_threads():
     from backend.db import models
@@ -50,7 +50,7 @@ def start_polling_threads():
         users = db.query(models.User).filter(
             models.User.access_token.isnot(None)
         ).all()
-        print(f"\n🚀 Starting email polling for {len(users)} user(s)...\n")
+        print(f"\n Starting email polling for {len(users)} user(s)...\n")
         for user in users:
             thread = threading.Thread(
                 target=_poll_emails_continuously,
@@ -61,6 +61,6 @@ def start_polling_threads():
             thread.start()
             polling_threads[user.id] = thread
     except Exception as e:
-        print(f"❌ Failed to start polling threads: {e}")
+        print(f" Failed to start polling threads: {e}")
     finally:
         db.close()
