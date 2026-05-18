@@ -50,6 +50,7 @@ export default function App() {
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('inbox');
+  const [activeSubTab, setActiveSubTab] = useState('all');
 
   // ── Global state ────────────────────────────────────────────────────────────
   const ragHook     = useRagStatus();
@@ -110,7 +111,7 @@ export default function App() {
         return (
           <InboxPage
             emails={emailHook.emails}
-            setEmails={emailHook.setEmails}
+            setEmails={emailHook.setEmails} 
             loading={emailHook.loading}
             error={emailHook.error}
             onRefresh={emailHook.refresh}
@@ -120,6 +121,8 @@ export default function App() {
             categoryFilter={categoryFilter}
             selectedEmail={selectedEmail}
             setSelectedEmail={setSelectedEmail}
+            activeSubTab={activeSubTab}
+            setActiveSubTab={setActiveSubTab}
           />
         );
       case 'chat':
@@ -150,6 +153,9 @@ export default function App() {
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        activeSubTab={activeSubTab}
+        setActiveSubTab={setActiveSubTab}
+        emails={emailHook.emails}
         ragStatus={ragHook.status}
         indexedCount={ragHook.indexedCount}
         dbTotal={ragHook.dbTotal}

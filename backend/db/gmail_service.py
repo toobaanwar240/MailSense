@@ -92,6 +92,24 @@ def fetch_user_emails(db, user_id: int, max_results: int = 100) -> int:
     try:
         service = get_gmail_service(db, user_id)
 
+        # Delete local emails that have been deleted or archived in Gmail inbox
+        try:
+            inbox_results = service.users().messages().list(userId="me", maxResults=500, q="in:inbox").execute()
+            gmail_messages = inbox_results.get("messages", [])
+            gmail_ids = {m["id"] for m in gmail_messages}
+            
+            local_emails = db.query(Email).filter(Email.user_id == user_id).all()
+            deleted_count = 0
+            for le in local_emails:
+                if le.message_id not in gmail_ids:
+                    db.delete(le)
+                    deleted_count += 1
+            if deleted_count > 0:
+                db.commit()
+                print(f"Deleted {deleted_count} local emails that were removed/archived in Gmail")
+        except Exception as sync_err:
+            print(f" Failed to sync active Gmail IDs: {sync_err}")
+
         last_email = (
             db.query(Email)
             .filter(Email.user_id == user_id)
@@ -105,9 +123,9 @@ def fetch_user_emails(db, user_id: int, max_results: int = 100) -> int:
         if last_email and last_email.date:
             after_date = last_email.date.strftime("%Y/%m/%d")
             query_parts.append(f"after:{after_date}")
-            print(f"🔍 Fetching emails after {after_date}")
+            print(f"Fetching emails after {after_date}")
         else:
-            print("⚠️ No valid date found - fetching latest emails")
+            print("No valid date found - fetching latest emails")
 
         # Always combine with inbox filter
         query_parts.append("in:inbox")
@@ -197,6 +215,7 @@ def fetch_user_emails(db, user_id: int, max_results: int = 100) -> int:
 def fetch_all_user_emails(db, user_id: int, max_results: int = 500) -> int:
     """
     Fetch ALL INBOX emails for a user (not just new ones).
+    Useful for initial setup or re-sync.
     """
     try:
         service = get_gmail_service(db, user_id)
@@ -215,7 +234,7 @@ def fetch_all_user_emails(db, user_id: int, max_results: int = 500) -> int:
         print(f" Gmail returned {len(messages)} INBOX messages")
         
         if not messages:
-            print("No messages found")
+            print(" No messages found")
             return 0
         
         saved_count = 0

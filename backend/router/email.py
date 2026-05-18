@@ -34,97 +34,75 @@ def sync_inbox(
     db: Session = Depends(get_db),
 ):
     """
-    Fetch unread emails, store snippet + body in DB (if not exists)
+    Fetch unread emails, storing snippet + body in DB with full labels and dates
     """
     try:
-        service = get_gmail_service(db, current_user.id)
-        response = service.users().messages().list(
-            userId="me",
-            labelIds=["INBOX", "UNREAD"],
-            maxResults=50
-        ).execute()
-
-        messages = response.get("messages", [])
-        saved_count = 0
-
-        for msg in messages:
-            # skip if already in DB
-            exists = db.query(Email).filter(
-                Email.user_id == current_user.id,
-                Email.message_id == msg["id"]
-            ).first()
-            if exists:
-                continue
-
-            # fetch metadata + snippet
-            msg_data = service.users().messages().get(
-                userId="me",
-                id=msg["id"],
-                format="metadata",
-                metadataHeaders=["From", "Subject"]
-            ).execute()
-
-            headers = msg_data.get("payload", {}).get("headers", [])
-            subject = next((h["value"] for h in headers if h["name"] == "Subject"), "")
-            sender = next((h["value"] for h in headers if h["name"] == "From"), "")
-            snippet = msg_data.get("snippet", "")
-
-            # fetch full body using MIME parser
-            mime_msg = get_mime_message(service, "me", msg["id"])
-            body = get_email_content(mime_msg) if mime_msg else ""
-
-            email_db = Email(
-                user_id=current_user.id,
-                message_id=msg["id"],
-                sender=sender,
-                subject=subject,
-                snippet=snippet,
-                body=body
-            )
-            db.add(email_db)
-            db.commit()  
-            db.refresh(email_db) 
-            
-            #  INGEST INTO VECTOR STORE
-            saved_count += 1
-
+        saved_count = fetch_user_emails(db, current_user.id, max_results=100)
         return {"status": "Inbox synced", "emails_fetched": saved_count}
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 
-#  List unread emails 
+#  List unread emails (snippet only)
 
 @router.get("/list")
 def list_unread_emails(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
-    max_results: int = 10
+    max_results: int = 10,
+    limit: int = None,
+    is_read: bool = None
 ):
     """
-    Returns unread emails (snippet only) for the logged-in user.
+    Returns emails for the logged-in user with optional limit and read/unread filtering.
     """
     try:
+        # Dynamic self-healing migration: Update legacy NULL labels to "INBOX,UNREAD"
+        legacy_emails = db.query(Email).filter(Email.user_id == current_user.id, Email.labels.is_(None)).all()
+        if legacy_emails:
+            for le in legacy_emails:
+                le.labels = "INBOX,UNREAD"
+            db.commit()
+
+        final_limit = limit if limit is not None else max_results
+        query = db.query(Email).filter(Email.user_id == current_user.id)
+        
+        if is_read is not None:
+            if hasattr(Email, 'is_read'):
+                query = query.filter(Email.is_read == is_read)
+            elif hasattr(Email, 'labels'):
+                if is_read:
+                    query = query.filter(Email.labels.is_not(None), ~Email.labels.contains("UNREAD"))
+                else:
+                    from sqlalchemy import or_
+                    query = query.filter(or_(Email.labels.contains("UNREAD"), Email.labels.is_(None)))
+
         emails = (
-            db.query(Email)
-            .filter(Email.user_id == current_user.id)
-            .order_by(nullslast(Email.date.desc()), Email.id.desc()) 
-            .limit(max_results)
+            query
+            .order_by(nullslast(Email.date.desc()), Email.id.desc())
+            .limit(final_limit)
             .all()
         )
 
         email_list = []
         for e in emails:
+            is_read_val = True
+            if hasattr(e, 'is_read') and e.is_read is not None:
+                is_read_val = e.is_read
+            elif hasattr(e, 'labels') and e.labels is not None:
+                is_read_val = "UNREAD" not in e.labels
+            else:
+                is_read_val = False  # Default to False (unread) if labels are completely NULL/None
+
             email_list.append({
                 "id": e.message_id,
                 "sender": e.sender,
                 "subject": e.subject,
                 "snippet": e.snippet,
                 "body": e.body,
-                "date": str(e.date), 
-                "is_read": e.is_read if hasattr(e, 'is_read') else None  
+                "date": str(e.date),  
+                "is_read": is_read_val  
             })
 
         return {"emails": email_list, "count": len(email_list)}
@@ -140,7 +118,7 @@ def read_email(
     db: Session = Depends(get_db)
 ):
     """
-    Fetch full email body for a single email and save to DB
+    Fetch full email body for a single email, save to DB, and mark as read.
     """
     try:
         service = get_gmail_service(db, current_user.id)
@@ -156,7 +134,27 @@ def read_email(
         ).first()
         if email_db:
             email_db.body = body
+            
+            # Update read status in local database
+            if hasattr(email_db, 'is_read'):
+                email_db.is_read = True
+            if hasattr(email_db, 'labels') and email_db.labels is not None:
+                labels_list = [l.strip() for l in email_db.labels.split(',') if l.strip()]
+                if "UNREAD" in labels_list:
+                    labels_list.remove("UNREAD")
+                email_db.labels = ",".join(labels_list)
+            
             db.commit()
+
+        # Mark as read in Gmail
+        try:
+            service.users().messages().modify(
+                userId="me",
+                id=msg_id,
+                body={"removeLabelIds": ["UNREAD"]}
+            ).execute()
+        except Exception as gmail_err:
+            print(f"Failed to remove UNREAD label in Gmail: {gmail_err}")
 
         return {"id": msg_id, "body": body}
 
@@ -184,7 +182,7 @@ def send_email(
         raise HTTPException(status_code=500, detail=str(e))
 
  
-# RAG
+#RAG 
 
 @router.post("/rag/index")
 def rag_index(
@@ -209,8 +207,7 @@ def rag_stats(current_user: str = Depends(get_current_user)):
     """Get RAG statistics."""
     return rag_system.get_stats(current_user)
 
-#  ADMIN 
-
+# ADMIN 
 @router.get("/admin/status")
 def admin_status(
     current_user: str = Depends(get_current_user),

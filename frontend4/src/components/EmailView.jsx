@@ -10,8 +10,6 @@ import {
   summarizeEmail, captionEmail, createCalendarEvent
 } from '../api/client.js';
 
-
-
 // ─── localStorage label helpers ───────────────────────────────────────────────
 const LABELS_KEY  = 'ms_labels';   // [{id, name, color}]
 const APPLIED_KEY = 'ms_applied';  // { emailId: [labelId, ...] }
@@ -242,7 +240,7 @@ const lp = {
 };
 
 // ─── EmailView ────────────────────────────────────────────────────────────────
-export default function EmailView({ email, classifyData, sentimentData, onRefreshSentiment, onPrevEmail, onNextEmail,onDeleteEmail }) {
+export default function EmailView({ email, classifyData, sentimentData, onRefreshSentiment, onPrevEmail, onNextEmail, onDeleteEmail }) {
   const [reaction,     setReaction]     = useState(null);
   const [aiResult,     setAiResult]     = useState('');
   const [aiLoading,    setAiLoading]    = useState('');
@@ -346,17 +344,18 @@ export default function EmailView({ email, classifyData, sentimentData, onRefres
                   <path d="M6 3l5 5-5 5"/>
                 </svg>
               </button>
+              {/* ── Delete button ── */}
               {onDeleteEmail && (
-              <button
-                onClick={onDeleteEmail}
-                style={{ ...styles.mvBtn, borderColor: 'var(--maroon3)55', color: 'var(--maroon3)' }}
-                title="Delete Email"
-              >
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
-                  <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9h8l1-9"/>
-                </svg>
-              </button>
-            )}
+                <button
+                  onClick={onDeleteEmail}
+                  style={{ ...styles.mvBtn, borderColor: 'var(--maroon3)55', color: 'var(--maroon3)' }}
+                  title="Delete Email"
+                >
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
+                    <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9h8l1-9"/>
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
